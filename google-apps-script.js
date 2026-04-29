@@ -34,9 +34,10 @@ function doPost(e) {
     const body   = JSON.parse(e.postData.contents);
     const action = body.action;
 
-    if (action === "save")        { saveData(body.data);                       return json({ ok: true }); }
-    if (action === "notify")      { sendNotifications(body.post, body.players); return json({ ok: true }); }
-    if (action === "notifyAdmin") { sendAdminNotification(body.req);            return json({ ok: true }); }
+    if (action === "save")            { saveData(body.data);                            return json({ ok: true }); }
+    if (action === "notify")          { sendNotifications(body.post, body.players);     return json({ ok: true }); }
+    if (action === "notifyAdmin")     { sendAdminNotification(body.req);                return json({ ok: true }); }
+    if (action === "notifyGameAdded") { sendGameAddedNotifications(body.game, body.players); return json({ ok: true }); }
 
     return json({ ok: true });
   } catch (err) {
@@ -106,6 +107,55 @@ function sendNotifications(post, players) {
   // OneSignal push notification
   if (ONESIGNAL_APP_ID && ONESIGNAL_KEY) {
     try { oneSignalPush(subject, post.body.slice(0, 100)); } catch (e) { Logger.log("Push failed: " + e.message); }
+  }
+}
+
+// ── NEW GAME NOTIFICATION ────────────────────────────────────────
+
+function sendGameAddedNotifications(game, players) {
+  if (!game) return;
+  game = game || {};
+  const num     = game.gameNumber != null ? game.gameNumber : "?";
+  const cls     = game.class === "B" ? "B" : "A";
+  const dateRaw = game.date || "";
+  const dateStr = dateRaw ? new Date(dateRaw + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric", year: "numeric" }) : "TBD";
+  const teeStr  = game.teeTime ? "Tee time: " + game.teeTime : "";
+  const rsvpStr = game.rsvpBy ? "RSVP by: " + new Date(game.rsvpBy + "T12:00:00").toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" }) : "";
+
+  const subject = "[SWMT] 📅 New Game #" + num + ": " + (game.name || "Game " + num);
+  const emailBody =
+    "Hello Shoe Wedge Mafia Tour members!\n\n" +
+    "A new game has been scheduled.\n\n" +
+    "Game #" + num + " · Class " + cls + "\n" +
+    "Name:  " + (game.name || "") + "\n" +
+    "Date:  " + dateStr + "\n" +
+    (teeStr ? teeStr + "\n" : "") +
+    (rsvpStr ? rsvpStr + "\n" : "") +
+    "\n──────────────────────\n" +
+    "Open the app to RSVP.\n" +
+    "Shoe Wedge Mafia Tour";
+
+  const smsText =
+    "[SWMT] 📅 Game #" + num + " (" + cls + "): " + (game.name || "") +
+    " · " + dateStr +
+    (game.teeTime ? " @ " + game.teeTime : "") +
+    (rsvpStr ? " · " + rsvpStr : "") +
+    " — Open the app to RSVP.";
+
+  (players || []).forEach(function (player) {
+    if (player.email && player.email.indexOf("@") > 0) {
+      try { MailApp.sendEmail({ to: player.email, subject: subject, body: emailBody }); }
+      catch (e) { Logger.log("Game-added email failed [" + player.email + "]: " + e.message); }
+    }
+    if (player.phone && TWILIO_SID && TWILIO_TOKEN) {
+      try { twilioSMS(player.phone, smsText); }
+      catch (e) { Logger.log("Game-added SMS failed [" + player.phone + "]: " + e.message); }
+    }
+  });
+
+  if (ONESIGNAL_APP_ID && ONESIGNAL_KEY) {
+    try { oneSignalPush("📅 New Game #" + num + ": " + (game.name || ""), dateStr + (game.teeTime ? " @ " + game.teeTime : "") + " · Class " + cls); }
+    catch (e) { Logger.log("Game-added push failed: " + e.message); }
   }
 }
 
