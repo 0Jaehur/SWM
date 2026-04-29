@@ -8,15 +8,22 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="SWMT">
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getDatabase, ref as dbRef, push, set, update, remove, onChildAdded, onChildChanged, onChildRemoved, query, limitToLast, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
+  import { getStorage, ref as stRef, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
+  window._fb = { initializeApp, getDatabase, dbRef, ref: dbRef, push, set, update, remove, onChildAdded, onChildChanged, onChildRemoved, query, limitToLast, serverTimestamp, getStorage, stRef, uploadBytes, getDownloadURL, deleteObject };
+  window.dispatchEvent(new Event("firebase-ready"));
+</script>
 <style>
 /* ── DESIGN TOKENS — Dark Mafia Theme ── */
 :root{
-  --bg-primary:#0D0D0D;
-  --bg-secondary:#161616;
-  --bg-card:#1C1C1C;
-  --bg-hover:#242424;
-  --border:#2E2E2E;
-  --border-light:#3A3A3A;
+  --bg-primary:#000000;
+  --bg-secondary:#0A0A0A;
+  --bg-card:#141414;
+  --bg-hover:#1C1C1C;
+  --border:#222222;
+  --border-light:#2C2C2C;
   --text-primary:#F0EDE8;
   --text-secondary:#888880;
   --text-muted:#555550;
@@ -141,10 +148,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .empty{text-align:center;padding:2.5rem;color:var(--text-muted);font-size:13px}
 
 /* ── HERO HEADER ── */
-.hero{background:linear-gradient(180deg,#111 0%,var(--bg-secondary) 100%);border-bottom:1px solid var(--border);padding:1.5rem 1rem;text-align:center;position:relative;overflow:hidden}
+.hero{background:#000;border-bottom:1px solid var(--border);padding:1.5rem 1rem;text-align:center;position:relative;overflow:hidden}
 .hero::before{content:"";position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold),transparent)}
 .hero::after{content:"";position:absolute;bottom:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--gold-dark),transparent)}
-.hero-logo{height:80px;object-fit:contain;margin-bottom:.75rem;filter:drop-shadow(0 0 12px rgba(201,168,76,.3))}
+.hero-logo{height:80px;object-fit:contain;margin-bottom:.75rem;filter:drop-shadow(0 0 16px rgba(255,255,255,.18))}
 .hero-title{font-size:20px;font-weight:900;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);text-shadow:0 0 20px rgba(201,168,76,.4)}
 .hero-sub{font-size:11px;color:var(--text-muted);letter-spacing:.1em;text-transform:uppercase;margin-top:4px}
 .sync-badge{display:inline-flex;align-items:center;gap:4px;font-size:10px;color:var(--green-light);background:var(--green-bg);border:1px solid var(--green);border-radius:8px;padding:2px 8px;margin-left:8px;letter-spacing:.04em}
@@ -180,44 +187,56 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .gscard{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius);padding:7px 12px;font-size:11px;color:var(--text-muted)}
 .gscard strong{display:block;font-size:15px;font-weight:700;color:var(--text-primary);margin-bottom:1px}
 
-/* ── BAND / BOARD ── */
-.board-filter{display:flex;gap:5px;margin-bottom:1rem;flex-wrap:wrap}
-.fchip{padding:4px 12px;font-size:11px;font-weight:500;border:1px solid var(--border);border-radius:14px;background:var(--bg-card);color:var(--text-muted);cursor:pointer;letter-spacing:.03em;transition:all .15s}
-.fchip:hover{border-color:var(--silver);color:var(--text-primary)}
-.fchip.active{background:var(--blue);color:#fff;border-color:var(--blue-light)}
-.post-list{display:flex;flex-direction:column;gap:10px}
-.post-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1rem 1.25rem;cursor:pointer;transition:all .15s}
-.post-card:hover{border-color:var(--border-light);background:var(--bg-hover)}
-.post-card.pinned{border-color:var(--gold-dark);background:var(--gold-bg)}
-.post-card.unread{border-left:3px solid var(--red)}
-.post-top{display:flex;align-items:center;gap:8px;margin-bottom:8px}
-.post-cat{font-size:10px;padding:2px 8px;border-radius:8px;font-weight:600;flex-shrink:0;letter-spacing:.04em;text-transform:uppercase}
-.cat-notice{background:var(--gold-bg);color:var(--gold-light);border:1px solid var(--gold-dark)}
-.cat-general{background:var(--bg-secondary);color:var(--silver);border:1px solid var(--border-light)}
-.cat-game{background:var(--green-bg);color:var(--green-light);border:1px solid var(--green)}
-.cat-photo{background:#1A1028;color:#9B80D4;border:1px solid #4A3080}
-.pin-icon{font-size:10px;color:var(--gold);font-weight:700;background:var(--gold-bg);border:1px solid var(--gold-dark);border-radius:6px;padding:1px 6px;flex-shrink:0;letter-spacing:.04em;text-transform:uppercase}
-.new-dot{width:7px;height:7px;border-radius:50%;background:var(--red);flex-shrink:0}
-.post-title{font-size:14px;font-weight:600;margin-bottom:4px;line-height:1.4}
-.post-preview{font-size:12px;color:var(--text-muted);line-height:1.5;margin-bottom:10px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.post-meta{display:flex;align-items:center;gap:10px;font-size:11px;color:var(--text-muted)}
-.post-author{display:flex;align-items:center;gap:5px;font-weight:600;color:var(--text-secondary)}
-.post-stats{display:flex;gap:8px;margin-left:auto}
-.like-btn{display:inline-flex;align-items:center;gap:4px;padding:3px 9px;border-radius:10px;font-size:11px;border:1px solid var(--border);background:var(--bg-secondary);color:var(--text-muted);cursor:pointer;transition:all .15s}
-.like-btn:hover{border-color:var(--red);color:var(--red)}
-.like-btn.liked{background:var(--red-bg);border-color:var(--red);color:var(--red)}
-.comment-box{background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;margin-top:8px}
-.comment-item{padding:8px 0;border-bottom:1px solid var(--border);font-size:12px;display:flex;align-items:flex-start;gap:6px}
-.comment-item:last-child{border-bottom:none}
-.comment-body{flex:1}
-.comment-author{font-weight:600;color:var(--gold);margin-right:4px}
-.comment-text{color:var(--text-secondary)}
-.comment-time{font-size:10px;color:var(--text-muted);display:block;margin-top:2px}
-.comment-input-row{display:flex;gap:8px;margin-top:10px;align-items:flex-end}
-.comment-input-row textarea{flex:1;min-height:36px;max-height:80px;font-size:12px;padding:6px 8px;border:1px solid var(--border-light);border-radius:var(--radius);background:var(--bg-secondary);color:var(--text-primary);font-family:inherit;resize:none}
-.comment-input-row textarea:focus{outline:none;border-color:var(--gold)}
-.post-detail-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;box-shadow:var(--shadow)}
-.post-detail-body{font-size:14px;color:var(--text-secondary);line-height:1.7;margin:1rem 0;white-space:pre-wrap;word-break:break-word}
+/* ── SCHEDULE / CALENDAR ── */
+.cal-wrap{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;margin-bottom:1rem}
+.cal-head{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg-secondary);border-bottom:1px solid var(--border)}
+.cal-month{font-size:14px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--gold)}
+.cal-nav{display:flex;gap:6px}
+.cal-nav button{padding:4px 10px;font-size:13px;background:var(--bg-card);border:1px solid var(--border-light);border-radius:6px;color:var(--text-primary);cursor:pointer}
+.cal-nav button:hover{background:var(--bg-hover);border-color:var(--gold)}
+.cal-dow{display:grid;grid-template-columns:repeat(7,1fr);background:var(--bg-secondary);border-bottom:1px solid var(--border)}
+.cal-dow span{padding:6px 0;text-align:center;font-size:10px;color:var(--text-muted);font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+.cal-dow span:first-child,.cal-dow span:last-child{color:var(--gold)}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr)}
+.cal-cell{aspect-ratio:1/1;border-right:1px solid var(--border);border-bottom:1px solid var(--border);padding:6px 4px 4px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:3px;position:relative;transition:background .12s;font-size:13px}
+.cal-cell:nth-child(7n){border-right:none}
+.cal-cell.empty{background:var(--bg-primary);cursor:default;color:var(--text-muted);opacity:.35}
+.cal-cell:not(.empty):hover{background:var(--bg-hover)}
+.cal-cell.today{background:var(--gold-bg)}
+.cal-cell.today .cal-day-num{color:var(--gold);font-weight:800}
+.cal-cell.selected{background:var(--gold-bg);box-shadow:inset 0 0 0 2px var(--gold)}
+.cal-cell.has-game{background:var(--green-bg)}
+.cal-cell.has-game.selected{background:var(--gold-bg);box-shadow:inset 0 0 0 2px var(--gold)}
+.cal-day-num{font-size:13px;font-weight:600;color:var(--text-primary)}
+.cal-game-dot{width:6px;height:6px;border-radius:50%;background:var(--green-light)}
+.cal-game-name{font-size:9px;color:var(--green-light);text-transform:uppercase;letter-spacing:.04em;font-weight:700;line-height:1;text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cal-unread{position:absolute;top:3px;right:3px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:var(--red);color:#fff;font-size:9px;font-weight:700;display:flex;align-items:center;justify-content:center}
+.day-detail{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:1.25rem;box-shadow:var(--shadow)}
+.day-detail-empty{text-align:center;padding:2rem 1rem;color:var(--text-muted);font-size:13px}
+.day-game-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px}
+.day-game-title{font-size:17px;font-weight:700;color:var(--gold);letter-spacing:.04em;text-transform:uppercase}
+.day-game-when{font-size:12px;color:var(--text-muted);margin-top:3px;letter-spacing:.04em}
+.day-game-info{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-bottom:1rem}
+.day-game-info .detail-item{background:var(--bg-secondary)}
+.rsvp-section{padding:12px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:1rem}
+.rsvp-label{font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;font-weight:700;margin-bottom:8px}
+.rsvp-btns{display:flex;gap:8px;flex-wrap:wrap}
+.rsvp-btn{flex:1;min-width:110px;padding:10px 12px;font-size:13px;font-weight:600;border:1px solid var(--border-light);border-radius:var(--radius);background:var(--bg-card);color:var(--text-secondary);cursor:pointer;transition:all .15s;letter-spacing:.04em;text-transform:uppercase}
+.rsvp-btn:hover{border-color:var(--silver);color:var(--text-primary)}
+.rsvp-btn.going.active{background:var(--green);border-color:var(--green-light);color:#fff}
+.rsvp-btn.notgoing.active{background:var(--red);border-color:var(--red);color:#fff}
+.rsvp-btn.clear{flex:0 0 auto;min-width:0;padding:10px 14px;background:none;color:var(--text-muted)}
+.rsvp-lists{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+.rsvp-list{background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--radius);padding:10px}
+.rsvp-list-head{font-size:10px;text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between}
+.rsvp-list.going .rsvp-list-head{color:var(--green-light)}
+.rsvp-list.notgoing .rsvp-list-head{color:var(--red)}
+.rsvp-list.pending .rsvp-list-head{color:var(--silver)}
+.rsvp-count{background:var(--bg-card);padding:1px 7px;border-radius:8px;font-size:10px;color:var(--text-primary);border:1px solid var(--border-light)}
+.rsvp-name-list{display:flex;flex-direction:column;gap:5px}
+.rsvp-name{display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text-primary);padding:3px 0}
+.rsvp-name.me{color:var(--gold);font-weight:700}
+.rsvp-empty{font-size:11px;color:var(--text-muted);font-style:italic;padding:4px 0}
 
 /* ── SCORECARD ── */
 .sc-outer{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm)}
@@ -283,6 +302,85 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 .pin-key:hover{background:var(--bg-hover);border-color:var(--silver)}
 .pin-key:active{transform:scale(.93);background:var(--gold-bg);border-color:var(--gold)}
 @keyframes pinShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+/* ── CHAT ── */
+.chat-wrap{display:flex;flex-direction:column;height:calc(100vh - 280px);min-height:400px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden}
+.chat-status{padding:8px 12px;font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;background:var(--bg-secondary);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px}
+.chat-status-dot{width:6px;height:6px;border-radius:50%;background:var(--text-muted)}
+.chat-status-dot.connected{background:var(--green-light);animation:pulse 2s infinite}
+.chat-status-dot.error{background:var(--red)}
+.chat-msg-list{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:8px}
+.chat-empty{text-align:center;padding:2rem 1rem;color:var(--text-muted);font-size:13px;margin:auto}
+.chat-msg{display:flex;gap:8px;max-width:85%;align-items:flex-end}
+.chat-msg.mine{align-self:flex-end;flex-direction:row-reverse}
+.chat-msg-bubble{padding:8px 12px;border-radius:14px;font-size:13px;line-height:1.4;word-wrap:break-word;background:var(--bg-secondary);border:1px solid var(--border)}
+.chat-msg.mine .chat-msg-bubble{background:var(--gold-bg);border-color:var(--gold-dark);color:var(--text-primary)}
+.chat-msg-meta{display:flex;flex-direction:column;font-size:10px;color:var(--text-muted);min-width:0}
+.chat-msg.mine .chat-msg-meta{align-items:flex-end}
+.chat-msg-author{font-weight:600;color:var(--text-secondary);font-size:11px;margin-bottom:2px;letter-spacing:.02em}
+.chat-msg.mine .chat-msg-author{color:var(--gold)}
+.chat-msg-author.role-admin{color:var(--gold-light)}
+.chat-msg-author.role-guest{color:var(--silver)}
+.chat-msg-time{font-size:9px;color:var(--text-muted);margin-top:3px;letter-spacing:.04em}
+.chat-input-row{display:flex;gap:6px;padding:10px;background:var(--bg-secondary);border-top:1px solid var(--border)}
+.chat-input-row input{flex:1;padding:9px 12px;border:1px solid var(--border-light);border-radius:20px;font-size:13px;background:var(--bg-card);color:var(--text-primary);font-family:inherit}
+.chat-input-row input:focus{outline:none;border-color:var(--gold)}
+.chat-input-row button{padding:0 18px;border:1px solid var(--gold);background:var(--gold-dark);color:var(--gold-light);border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;letter-spacing:.04em;text-transform:uppercase}
+.chat-input-row button:hover{background:var(--gold);color:#000}
+.chat-input-row button:disabled{opacity:.4;cursor:not-allowed}
+.chat-nick-banner{padding:10px 12px;font-size:12px;background:var(--gold-bg);border-bottom:1px solid var(--gold-dark);color:var(--gold-light);display:flex;align-items:center;justify-content:space-between;gap:8px}
+.chat-config-warn{padding:14px;font-size:12px;color:var(--text-muted);text-align:center;line-height:1.6}
+.chat-config-warn strong{color:var(--gold);display:block;margin-bottom:4px}
+
+/* ── MOMENTS ── */
+.moments-toolbar{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.moments-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(110px,1fr));gap:8px;margin-bottom:1rem}
+.moment-card{position:relative;border-radius:var(--radius);overflow:hidden;background:var(--bg-card);border:1px solid var(--border);cursor:pointer;transition:all .15s;aspect-ratio:1/1}
+.moment-card:hover{border-color:var(--gold-dark);transform:scale(1.02)}
+.moment-thumb{width:100%;height:100%;object-fit:cover;display:block}
+.moment-thumb-doc{width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--bg-secondary);gap:6px;padding:10px}
+.moment-thumb-doc-icon{font-size:28px;line-height:1}
+.moment-thumb-doc-name{font-size:9px;color:var(--text-secondary);text-align:center;word-break:break-all;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.moment-overlay{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.8));padding:5px 7px;display:flex;gap:7px;align-items:center}
+.moment-stat{font-size:10px;color:rgba(255,255,255,.9);display:flex;align-items:center;gap:2px;font-weight:600}
+.moment-video-badge{position:absolute;top:5px;left:5px;background:rgba(0,0,0,.65);border-radius:4px;padding:2px 5px;font-size:9px;color:#fff;font-weight:700;letter-spacing:.04em}
+.moment-new-badge{position:absolute;top:5px;right:5px;background:var(--red);border-radius:4px;padding:2px 5px;font-size:9px;color:#fff;font-weight:700}
+.moment-empty{text-align:center;padding:3rem 1rem;color:var(--text-muted);font-size:13px}
+.moment-detail-modal{max-width:480px}
+.moment-detail-video{width:100%;max-height:40vh;border-radius:var(--radius);margin-bottom:12px;background:#000;display:block}
+.moment-detail-img{width:100%;max-height:45vh;object-fit:contain;border-radius:var(--radius);margin-bottom:12px;background:#000;display:block;cursor:zoom-in}
+.moment-detail-doc{display:flex;align-items:center;gap:12px;padding:14px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px;cursor:pointer;text-decoration:none}
+.moment-detail-doc:hover{border-color:var(--gold)}
+.moment-detail-doc-icon{font-size:26px;flex-shrink:0}
+.moment-detail-doc-name{font-size:13px;font-weight:600;color:var(--text-primary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.moment-detail-doc-size{font-size:11px;color:var(--text-muted);margin-top:2px}
+.moment-detail-caption{font-size:13px;color:var(--text-primary);line-height:1.5;margin-bottom:10px}
+.moment-detail-meta{display:flex;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap}
+.moment-detail-author{font-size:12px;color:var(--gold);font-weight:600}
+.moment-detail-date{font-size:11px;color:var(--text-muted)}
+.moment-detail-actions{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+.moment-action-btn{display:flex;align-items:center;gap:5px;padding:6px 12px;border:1px solid var(--border-light);border-radius:20px;background:var(--bg-secondary);color:var(--text-muted);font-size:12px;cursor:pointer;transition:all .15s;font-family:inherit}
+.moment-action-btn:hover{border-color:var(--silver);color:var(--text-primary)}
+.moment-action-btn.liked{background:var(--red-bg);border-color:var(--red);color:var(--red)}
+.moment-comments{border-top:1px solid var(--border);padding-top:12px;margin-top:4px}
+.moment-comments-head{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin-bottom:10px}
+.moment-comment{display:flex;gap:8px;margin-bottom:10px}
+.moment-comment-body{flex:1;background:var(--bg-secondary);border:1px solid var(--border);border-radius:12px;padding:8px 12px}
+.moment-comment-author{font-size:11px;font-weight:600;color:var(--text-secondary);margin-bottom:3px;letter-spacing:.02em}
+.moment-comment-text{font-size:12px;color:var(--text-primary);line-height:1.4}
+.moment-comment-time{font-size:10px;color:var(--text-muted);margin-top:3px;letter-spacing:.04em}
+.moment-comment-del{background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:11px;padding:2px 4px;border-radius:4px;line-height:1;flex-shrink:0;margin-top:2px}
+.moment-comment-del:hover{color:var(--red)}
+.moment-comment-input{display:flex;gap:6px;margin-top:12px}
+.moment-comment-input input{flex:1;padding:8px 12px;border:1px solid var(--border-light);border-radius:20px;font-size:12px;background:var(--bg-card);color:var(--text-primary);font-family:inherit}
+.moment-comment-input input:focus{outline:none;border-color:var(--gold)}
+.moment-comment-input button{padding:0 14px;border:1px solid var(--gold);background:var(--gold-dark);color:var(--gold-light);border-radius:20px;font-size:11px;font-weight:600;cursor:pointer;text-transform:uppercase;letter-spacing:.04em;font-family:inherit}
+.moment-comment-input button:hover{background:var(--gold);color:#000}
+.moment-upload-area{border:2px dashed var(--border-light);border-radius:var(--radius);padding:24px;text-align:center;cursor:pointer;color:var(--text-muted);font-size:13px;transition:all .15s;margin-bottom:10px}
+.moment-upload-area:hover,.moment-upload-area.drag{border-color:var(--gold);color:var(--gold);background:var(--gold-bg)}
+.moment-preview-wrap{position:relative;margin-bottom:10px;border-radius:var(--radius);overflow:hidden;border:1px solid var(--border)}
+.moment-preview-img{width:100%;max-height:200px;object-fit:contain;background:#000;display:block}
+.moment-preview-remove{position:absolute;top:6px;right:6px;background:rgba(0,0,0,.7);border:none;color:#fff;border-radius:50%;width:24px;height:24px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px}
+
 /* ── USER BAR ── */
 .user-bar{display:flex;align-items:center;justify-content:space-between;padding:7px 1rem;background:var(--bg-secondary);border-bottom:1px solid var(--border);font-size:11px;position:sticky;top:0;z-index:101}
 .role-badge{display:inline-block;padding:2px 8px;border-radius:10px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
@@ -295,54 +393,14 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 
 
 
-<div id="pageLogin" class="page active">
-  <div class="login-wrap">
-    <div class="login-title">Shoe Wedge Mafia Tour</div>
-    <div class="login-sub">EST. 2020</div>
-    <div class="login-card">
-      <div id="loginStep1">
-        <div class="login-section-label">Who are you?</div>
-        <div class="member-pick-list" id="loginMemberList"></div>
-        <div style="text-align:center;padding-top:6px">
-          <button class="btn-link" style="font-size:12px;color:var(--text-muted)" onclick="loginAsGuest()">Continue as Guest (Read Only)</button>
-        </div>
-      </div>
-      <div id="loginStep2" style="display:none">
-        <div class="pin-header">
-          <div class="pin-selected-name" id="loginSelectedName"></div>
-          <div style="font-size:11px;color:var(--text-muted)">Enter your 4-digit PIN</div>
-        </div>
-        <div class="pin-dots">
-          <div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div>
-          <div class="pin-dot" id="pd2"></div><div class="pin-dot" id="pd3"></div>
-        </div>
-        <div class="pin-pad">
-          <button class="pin-key" onclick="pinKey('1')">1</button>
-          <button class="pin-key" onclick="pinKey('2')">2</button>
-          <button class="pin-key" onclick="pinKey('3')">3</button>
-          <button class="pin-key" onclick="pinKey('4')">4</button>
-          <button class="pin-key" onclick="pinKey('5')">5</button>
-          <button class="pin-key" onclick="pinKey('6')">6</button>
-          <button class="pin-key" onclick="pinKey('7')">7</button>
-          <button class="pin-key" onclick="pinKey('8')">8</button>
-          <button class="pin-key" onclick="pinKey('9')">9</button>
-          <button class="pin-key" onclick="loginStep1Back()" style="font-size:13px;color:var(--text-muted)">← Back</button>
-          <button class="pin-key" onclick="pinKey('0')">0</button>
-          <button class="pin-key" onclick="pinKey('del')" style="font-size:14px">⌫</button>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div id="pageMain" class="page">
+<div id="pageMain" class="page active">
   <div class="user-bar" id="userBar">
-    <div style="display:flex;align-items:center;gap:8px">
+    <div id="userBarLeft" style="display:flex;align-items:center;gap:8px">
       <div id="userBarAvatar"></div>
       <span id="userBarName" style="color:var(--text-primary);font-weight:600"></span>
       <span id="userBarRole" class="role-badge"></span>
     </div>
-    <button class="btn-sm" onclick="logout()">Logout</button>
+    <div id="userBarRight" style="display:flex;align-items:center;gap:6px"></div>
   </div>
   <!-- Hero -->
   <div class="hero">
@@ -357,12 +415,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
       <button class="vtab active" id="vtab0" onclick="setView(0,this)">Standings</button>
       <button class="vtab" id="vtab1" onclick="setView(1,this)">Game scores</button>
       <button class="vtab" id="vtab2" onclick="setView(2,this)">Points table</button>
-      <button class="vtab" id="vtab3" onclick="setView(3,this)">Band <span class="unread-badge" id="unreadBadge" style="display:none">0</span></button>
+      <button class="vtab" id="vtab3" onclick="setView(3,this)">Schedule <span class="unread-badge" id="scheduleUnreadBadge" style="display:none">0</span></button>
+      <button class="vtab" id="vtab4" onclick="setView(4,this)">Chat <span class="unread-badge" id="chatUnreadBadge" style="display:none">0</span></button>
+      <button class="vtab" id="vtab5" onclick="setView(5,this)">Moments <span class="unread-badge" id="momentsUnreadBadge" style="display:none">0</span></button>
     </div>
     <div id="v0"></div>
     <div id="v1" style="display:none"></div>
     <div id="v2" style="display:none"></div>
     <div id="v3" style="display:none"></div>
+    <div id="v4" style="display:none"></div>
+    <div id="v5" style="display:none"></div>
     <div id="modalArea"></div>
 
     <!-- Floating action buttons -->
@@ -396,13 +458,6 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 </div>
 </div>
 
-<div id="pagePostDetail" class="page">
-<div class="app">
-  <button class="back-btn" onclick="setView(3,document.getElementById('vtab3'))">&#8592; Band</button>
-  <div id="postDetailContent"></div>
-</div>
-</div>
-
 <div id="pageScorecard" class="page">
 <div class="app">
   <button class="back-btn" onclick="navBackToGame()">&#8592; Back to Game scores</button>
@@ -414,17 +469,27 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;backgrou
 const COLORS=[["#1A2A1A","#3D9A5A"],["#1A1A2A","#5A70A0"],["#2A1A08","#C9A84C"],["#2A0A0A","#CC5555"],["#1A0A2A","#8060C0"],["#0A1A2A","#4080B0"],["#1A1A0A","#808040"],["#1A1A1A","#888880"]];
 const DEFAULT_PTS=[500,300,200,150,120,100,90,80,70,60,55,50,45,40,35,30,25,20,15,10];
 const ADMIN_PIN="1234";
-const CATS=[{id:"notice",label:"Notice",cls:"cat-notice"},{id:"general",label:"General",cls:"cat-general"},{id:"game",label:"Game",cls:"cat-game"},{id:"photo",label:"Photo",cls:"cat-photo"}];
 const DEFAULT_PARS=[4,3,4,4,5,4,3,4,5,4,3,5,4,4,3,5,4,4];
 
 /* ── SETUP: paste your values here after following the guide ── */
 const CONFIG={
   appsScriptUrl:"https://script.google.com/macros/s/AKfycbwlnX_k2v7O8nmKZN_4KBbojrOEhziCCAFW-ogZpdPF8bejituMRTgOw4oX8Zmwx5rB7w/exec",
   oneSignalAppId:"",
+  // ── FIREBASE (Group Chat) ──
+  firebase:{
+    apiKey:"AIzaSyCaEwJtTM1ba9xG81bL51KKL1wtuTescA0",
+    authDomain:"swm1-45147.firebaseapp.com",
+    databaseURL:"https://swm1-45147-default-rtdb.firebaseio.com",
+    projectId:"swm1-45147",
+    storageBucket:"swm1-45147.firebasestorage.app",
+    messagingSenderId:"932716786370",
+    appId:"1:932716786370:web:4648ba7074fe971acac15b",
+    measurementId:"G-NZQ96Y5QWY"
+  },
 };
 let SESSION={pid:null,role:"guest",name:"Guest",loggedIn:false};
 
-let S={name:"Shoe Wedge Mafia Tour",totalGames:13,players:[],games:[],pointsTable:DEFAULT_PTS.slice(),posts:[],readPostIds:[],pendingMembers:[],view:0,game:0,adminMode:false,boardFilter:"all"};
+let S={name:"Shoe Wedge Mafia Tour",totalGames:13,players:[],games:[],pointsTable:DEFAULT_PTS.slice(),pendingMembers:[],view:0,game:0,adminMode:false};
 
 function initPlayers(){
   const alpha="ABCDEFGHIJKLMNOPQ".split("");
@@ -432,14 +497,7 @@ function initPlayers(){
   const months=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
   alpha.forEach((l,i)=>S.players.push({id:i+1,firstName:l,lastName:l,handicap:hcps[i],birthday:months[i%12]+" "+((i*7+5)%28+1),joinYear:2018+(i%6),photo:null,awards:[],bio:"",phone:"",email:"",pin:"0000",role:"member"}));
 }
-function initGames(){S.games=Array.from({length:S.totalGames},(_,i)=>({id:i+1,name:"Game "+(i+1),done:false,scores:{},holes:{},pars:DEFAULT_PARS.slice()}));}
-function initPosts(){
-  S.posts=[
-    {id:1,author:"Admin",cat:"notice",title:"Welcome to Shoe Wedge Mafia Tour!",body:"The season has started! EST. 2020 · Tisdale Hotel & Pub",pinned:true,likes:[],comments:[{id:1,author:"A A",text:"Let's go!",time:"10:00"}],time:"2024-01-01"},
-    {id:2,author:"B B",cat:"game",title:"Game 1 Recap — What a battle!",body:"Great effort from everyone in Game 1.",pinned:false,likes:[],comments:[],time:"2024-03-15"},
-  ];
-  S.readPostIds=[];
-}
+function initGames(){S.games=Array.from({length:S.totalGames},(_,i)=>({id:i+1,name:"Game "+(i+1),done:false,scores:{},holes:{},pars:DEFAULT_PARS.slice(),rsvps:{},date:"",teeTime:"",addedAt:Date.now()}));}
 function save(){try{localStorage.setItem("swmt_branded",JSON.stringify(S));}catch(e){}if(CONFIG.appsScriptUrl)syncToSheet();}
 function load(){
   try{
@@ -451,8 +509,10 @@ function load(){
 }
 function fixAll(){
   S.players.forEach(p=>{if(!p.birthday)p.birthday="Jan 01";if(!p.joinYear)p.joinYear=2020;if(!p.awards)p.awards=[];if(!p.bio)p.bio="";if(p.photo===undefined)p.photo=null;if(p.handicap==null)p.handicap=90;if(!p.phone)p.phone="";if(!p.email)p.email="";if(!p.pin)p.pin="0000";if(!p.role)p.role="member";});
-  S.games.forEach(g=>{if(!g.holes)g.holes={};if(!g.pars)g.pars=DEFAULT_PARS.slice();S.players.forEach(p=>{const hs=g.holes[p.id];if(hs&&hs.some(v=>v!=null&&v!=""))g.scores[p.id]=hs.reduce((s,v)=>s+(v!=null&&v!=""?Number(v):0),0);});});
-  if(!S.posts)S.posts=[];if(!S.readPostIds)S.readPostIds=[];if(!S.boardFilter)S.boardFilter="all";if(!S.pendingMembers)S.pendingMembers=[];
+  S.games.forEach(g=>{if(!g.holes)g.holes={};if(!g.pars)g.pars=DEFAULT_PARS.slice();if(!g.rsvps)g.rsvps={};if(g.date===undefined)g.date="";if(g.teeTime===undefined)g.teeTime="";if(!g.addedAt)g.addedAt=Date.now();S.players.forEach(p=>{const hs=g.holes[p.id];if(hs&&hs.some(v=>v!=null&&v!=""))g.scores[p.id]=hs.reduce((s,v)=>s+(v!=null&&v!=""?Number(v):0),0);});});
+  if(!S.pendingMembers)S.pendingMembers=[];
+  // Clean up old post-related state from previous versions
+  delete S.posts;delete S.readPostIds;delete S.boardFilter;
 }
 
 function computeNetResults(g){
@@ -468,17 +528,30 @@ function holeClass(score,par){if(score==null||score==""||par==null)return"";cons
 function getStatsUpTo(pid,excLast){const done=S.games.filter(g=>g.done);const games=excLast?done.slice(0,-1):done;let total=0,wins=0,top3=0,played=0;games.forEach(g=>{const r=getRanked(g),i=r.findIndex(x=>x.pid===pid);if(i<0)return;played++;total+=S.pointsTable[i]||0;if(i===0)wins++;if(i<3)top3++;});return{total,wins,top3,played};}
 function getRankChanges(){const done=S.games.filter(g=>g.done);if(done.length<2)return{};const cur=S.players.map(p=>({id:p.id,total:getStatsUpTo(p.id,false).total})).sort((a,b)=>b.total-a.total);const prev=S.players.map(p=>({id:p.id,total:getStatsUpTo(p.id,true).total})).sort((a,b)=>b.total-a.total);const ch={};cur.forEach((p,i)=>{const pi=prev.findIndex(x=>x.id===p.id);ch[p.id]=pi-i;});return ch;}
 function rankChgEl(diff){if(diff===0||diff==null)return'<div class="rank-chg"><span class="rank-eq">—</span></div>';if(diff>0)return'<div class="rank-chg"><span class="rank-up">▲</span><span class="rank-num up">'+diff+'</span></div>';return'<div class="rank-chg"><span class="rank-dn">▼</span><span class="rank-num dn">'+Math.abs(diff)+'</span></div>';}
-function getUnreadCount(){return S.posts.filter(p=>!S.readPostIds.includes(p.id)).length;}
-function markRead(id){if(!S.readPostIds.includes(id)){S.readPostIds.push(id);save();}updateUnreadBadge();}
-function updateUnreadBadge(){const c=getUnreadCount(),b=document.getElementById("unreadBadge");if(b){if(c>0){b.textContent=c>99?"99+":c;b.style.display="inline-flex";}else b.style.display="none";}updateBadge(c);}
 function getRanked(g){return Object.entries(g.scores).filter(([,v])=>v!=null&&v!="").map(([pid,sc])=>({pid:Number(pid),score:Number(sc)})).sort((a,b)=>a.score-b.score);}
-function getStats(pid){let total=0,wins=0,top3=0,played=0;S.games.forEach(g=>{if(!g.done)return;const r=getRanked(g),i=r.findIndex(x=>x.pid===pid);if(i<0)return;played++;total+=S.pointsTable[i]||0;if(i===0)wins++;if(i<3)top3++;});return{total,wins,top3,played};}
+function getStats(pid){
+  let total=0,wins=0,top3=0,played=0,birdies=0,eagles=0;
+  S.games.forEach(g=>{
+    if(!g.done)return;
+    const r=getRanked(g),i=r.findIndex(x=>x.pid===pid);
+    if(i<0)return;
+    played++;total+=S.pointsTable[i]||0;
+    if(i===0)wins++;if(i<3)top3++;
+    const holes=g.holes&&g.holes[pid];
+    if(holes){holes.forEach((score,h)=>{
+      if(score==null||score==="")return;
+      const par=(g.pars&&g.pars[h]!=null)?g.pars[h]:DEFAULT_PARS[h];
+      const diff=par-Number(score);
+      if(diff>=2)eagles++;else if(diff===1)birdies++;
+    });}
+  });
+  return{total,wins,top3,played,birdies,eagles};
+}
 function getStandings(){return S.players.map(p=>({...p,...getStats(p.id)})).sort((a,b)=>b.total-a.total);}
 function av(p,size){size=size||28;const[bg,tc]=COLORS[p.id%COLORS.length];return'<div class="avatar" style="width:'+size+'px;height:'+size+'px;background:'+bg+';color:'+tc+';font-size:'+(size<36?10:Math.floor(size/3.2))+'px;border:1px solid '+tc+'40">'+(p.firstName[0]||"")+(p.lastName[0]||"")+'</div>';}
 function avByName(name,size){size=size||22;const p=S.players.find(x=>(x.firstName+" "+x.lastName)===name);if(p)return av(p,size);return'<div class="avatar" style="width:'+size+'px;height:'+size+'px;background:#1A1A18;color:#888;font-size:10px;border:1px solid #333">'+name.slice(0,2)+'</div>';}
 function ptsClass(v){return v>=300?"pts-high":v>=100?"pts-mid":"pts-low";}
 function hcpTag(p){return'<span class="hcp-tag">'+(p.handicap!=null?p.handicap:"—")+'</span>';}
-function catInfo(id){return CATS.find(c=>c.id===id)||{label:id,cls:"cat-general"};}
 function newId(arr){return arr.length?Math.max(...arr.map(x=>x.id))+1:1;}
 function ordinal(n){return n+(n===1?"st":n===2?"nd":n===3?"rd":"th");}
 function rankBadgeClass(r){return r===1?"rank-gold":r===2?"rank-silver":r===3?"rank-bronze":"";}
@@ -544,26 +617,122 @@ function setHole(gid,pid,h,val){const g=S.games.find(x=>x.id===gid);if(!g||g.don
 
 function renderAll(){
   document.getElementById("gamesInfo").textContent=S.games.filter(g=>g.done).length+" / "+S.totalGames+" games";
-  renderStats();updateUnreadBadge();
-  if(S.view===0)renderStandings();else if(S.view===1)renderGames();else if(S.view===2)renderPts();else renderBoard();
+  renderStats();updateScheduleBadge();updateChatBadge();updateMomentsBadge();
+  if(S.view===0)renderStandings();
+  else if(S.view===1)renderGames();
+  else if(S.view===2)renderPts();
+  else if(S.view===3)renderSchedule();
+  else if(S.view===4)renderChat();
+  else if(S.view===5)renderMoments();
   const pg=document.querySelector(".page.active");
-  if(pg){if(pg.id==="pageProfiles")renderProfiles();if(pg.id==="pageDetail"&&S._detailPid)renderDetail(S._detailPid);if(pg.id==="pagePostDetail"&&S._postId!=null)renderPostDetail(S._postId);if(pg.id==="pageScorecard"&&S._scorecardGid)renderScorecard(S._scorecardGid);}
+  if(pg){if(pg.id==="pageProfiles")renderProfiles();if(pg.id==="pageDetail"&&S._detailPid)renderDetail(S._detailPid);if(pg.id==="pageScorecard"&&S._scorecardGid)renderScorecard(S._scorecardGid);}
   save();
+}
+
+function getUpcomingGame(){
+  const today=fmtDate(new Date());
+  const candidates=S.games.filter(g=>!g.done&&g.date).sort((a,b)=>a.date.localeCompare(b.date));
+  const future=candidates.filter(g=>g.date>=today);
+  return future.length?future[0]:candidates[0]||null;
 }
 
 function renderStats(){
   const st=getStandings(),done=S.games.filter(g=>g.done).length,leader=st[0];
+  const ug=getUpcomingGame();
+  let upcomingCard="";
+  if(ug){
+    const dateStr=new Date(ug.date+'T12:00:00').toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"});
+    const sub=ug.teeTime?'📅 '+dateStr+' · ⛳ '+ug.teeTime:'📅 '+dateStr;
+    upcomingCard='<div class="stat-card click" onclick="showRsvpModal('+ug.id+')">'+
+      '<div class="stat-label">Upcoming Tournament</div>'+
+      '<div class="stat-val" style="font-size:15px;margin-top:2px;color:var(--gold);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+escapeHtml(ug.name)+'</div>'+
+      '<div class="stat-sub">'+sub+'</div>'+
+      '<div class="stat-sub link">View RSVP &#8594;</div>'+
+    '</div>';
+  }else{
+    upcomingCard='<div class="stat-card click" onclick="showRsvpModal(null)">'+
+      '<div class="stat-label">Upcoming Tournament</div>'+
+      '<div class="stat-val" style="font-size:13px;color:var(--text-muted);margin-top:4px;line-height:1.4">No game<br>scheduled yet</div>'+
+      '<div class="stat-sub link">View RSVP &#8594;</div>'+
+    '</div>';
+  }
   document.getElementById("statGrid").innerHTML=
     '<div class="stat-card"><div class="stat-label">Games played</div><div class="stat-val">'+done+'</div><div class="stat-sub">of '+S.totalGames+' scheduled</div></div>'+
     '<div class="stat-card click" onclick="nav(\'profiles\')"><div class="stat-label">Players</div><div class="stat-val">'+S.players.length+'</div><div class="stat-sub link">View roster &#8594;</div></div>'+
     '<div class="stat-card"><div class="stat-label">Season leader</div><div class="stat-val" style="font-size:15px;margin-top:4px;color:var(--gold)">'+(leader?leader.firstName+" "+leader.lastName:"—")+'</div><div class="stat-sub">'+(leader?leader.total+" pts":"")+'</div></div>'+
-    '<div class="stat-card"><div class="stat-label">Points awarded</div><div class="stat-val">'+st.reduce((s,p)=>s+p.total,0).toLocaleString()+'</div><div class="stat-sub">total this season</div></div>';
+    upcomingCard;
+}
+
+function showRsvpModal(gameId){
+  if(!gameId){
+    document.getElementById("modalArea").innerHTML=
+      '<div class="modal-overlay" onclick="if(event.target===this)closeModal()">'+
+      '<div class="modal" style="max-width:400px"><h2>Upcoming Tournament</h2>'+
+      '<div class="empty">No games scheduled yet.<br>The Don can add a game from the Game Scores tab.</div>'+
+      '<div class="row-btns"><button class="btn" onclick="closeModal()">Close</button></div></div></div>';
+    return;
+  }
+  const g=S.games.find(x=>x.id===gameId);if(!g)return;
+  if(!g.rsvps)g.rsvps={};
+  const going=[],notGoing=[],pending=[];
+  S.players.forEach(p=>{
+    const key="member:"+p.id;
+    const r=g.rsvps[key];
+    if(r==="going")going.push(p);
+    else if(r==="not_going")notGoing.push(p);
+    else pending.push(p);
+  });
+  const mkList=(title,arr,cls)=>{
+    const items=arr.length?arr.map(p=>{
+      const isMe=SESSION.pid===p.id;
+      return'<div class="rsvp-name '+(isMe?"me":"")+'">'+av(p,22)+'<span>'+escapeHtml(p.firstName+" "+p.lastName)+(isMe?' (you)':'')+'</span></div>';
+    }).join(""):'<div class="rsvp-empty">No one yet</div>';
+    return'<div class="rsvp-list '+cls+'"><div class="rsvp-list-head"><span>'+title+'</span><span class="rsvp-count">'+arr.length+'</span></div><div class="rsvp-name-list">'+items+'</div></div>';
+  };
+  const dateStr=g.date?new Date(g.date+'T12:00:00').toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric",year:"numeric"}):"Date TBD";
+  const myKey=getRsvpKey();
+  const myRsvp=myKey?g.rsvps[myKey]:null;
+  let rsvpUI="";
+  if(SESSION.role==="member"){
+    rsvpUI='<div class="rsvp-section"><div class="rsvp-label">Your RSVP</div>'+
+      '<div class="rsvp-btns">'+
+        '<button class="rsvp-btn going '+(myRsvp==="going"?"active":"")+'" onclick="setRsvpFromModal('+g.id+',\'going\')">✓ Going</button>'+
+        '<button class="rsvp-btn notgoing '+(myRsvp==="not_going"?"active":"")+'" onclick="setRsvpFromModal('+g.id+',\'not_going\')">✕ Not Going</button>'+
+        (myRsvp?'<button class="rsvp-btn clear" onclick="setRsvpFromModal('+g.id+',null)">Clear</button>':'')+
+      '</div></div>';
+  }else if(SESSION.role==="admin"){
+    rsvpUI='<div class="rsvp-section"><div class="rsvp-label" style="color:var(--gold)">The Don\'s View</div><div style="font-size:12px;color:var(--text-muted);padding:4px 0">Toggle member status from the lists below.</div></div>';
+  }else{
+    rsvpUI='<div style="font-size:12px;color:var(--text-muted);margin-bottom:14px">Log in as a member to set your RSVP.</div>';
+  }
+  document.getElementById("modalArea").innerHTML=
+    '<div class="modal-overlay" onclick="if(event.target===this)closeModal()">'+
+    '<div class="modal" style="max-width:480px">'+
+      '<h2>'+escapeHtml(g.name)+'</h2>'+
+      '<div style="font-size:12px;color:var(--text-muted);margin-bottom:14px;letter-spacing:.04em">📅 '+dateStr+(g.teeTime?' &nbsp;⛳ Tee time: '+g.teeTime:"")+'</div>'+
+      rsvpUI+
+      '<div class="rsvp-lists">'+mkList("✓ Going",going,"going")+mkList("✕ Not Going",notGoing,"notgoing")+mkList("Pending",pending,"pending")+'</div>'+
+      '<div class="row-btns" style="margin-top:14px"><button class="btn" onclick="closeModal()">Close</button></div>'+
+    '</div></div>';
+}
+
+function setRsvpFromModal(gameId,status){
+  const g=S.games.find(x=>x.id===gameId);if(!g)return;
+  if(!g.rsvps)g.rsvps={};
+  const key=getRsvpKey();if(!key){alert("Log in as a member to RSVP.");return;}
+  if(status===null)delete g.rsvps[key];
+  else g.rsvps[key]=status;
+  save();renderStats();showRsvpModal(gameId);
 }
 
 function renderStandings(){
   const st=getStandings(),ch=getRankChanges(),done=S.games.filter(g=>g.done).length,showChg=done>=2;
-  const cols=showChg?"20px 36px 1fr 80px 50px 50px 60px 50px":"36px 1fr 80px 50px 50px 60px 50px";
-  let h='<div class="table-wrap"><div class="t-head" style="grid-template-columns:'+cols+'">'+(showChg?'<span></span>':'')+'<span>#</span><span>Player</span><span>Points</span><span style="text-align:center">Wins</span><span style="text-align:center">Top 3</span><span style="text-align:center">Played</span><span></span></div>';
+  const cols=showChg?"20px 36px 1fr 80px 48px 48px 50px 50px 56px 50px":"36px 1fr 80px 48px 48px 50px 50px 56px 50px";
+  let h='<div class="table-wrap"><div class="t-head" style="grid-template-columns:'+cols+'">'+(showChg?'<span></span>':'')+
+    '<span>#</span><span>Player</span><span>Points</span>'+
+    '<span style="text-align:center;color:var(--green-light)">Birdie</span>'+
+    '<span style="text-align:center;color:#60A0E0">Eagle</span>'+
+    '<span style="text-align:center">Wins</span><span style="text-align:center">Top 3</span><span style="text-align:center">Played</span><span></span></div>';
   if(!st.length)h+='<div class="empty">No players yet. The family awaits.</div>';
   st.forEach((p,i)=>{
     const bc=i===0?"p1":i===1?"p2":i===2?"p3":"pn";
@@ -571,6 +740,8 @@ function renderStandings(){
       '<div class="pos-badge '+bc+'" style="margin:auto">'+(i+1)+'</div>'+
       '<div style="display:flex;align-items:center;gap:8px;min-width:0">'+av(p,28)+'<span style="font-size:13px;font-weight:600;cursor:pointer;color:var(--text-primary)" onclick="navDetail('+p.id+')">'+p.firstName+' '+p.lastName+'</span>'+hcpTag(p)+'</div>'+
       '<div><span class="pts-badge '+ptsClass(p.total)+'">'+p.total+'</span></div>'+
+      '<div style="text-align:center;font-size:13px;font-weight:'+(p.birdies>0?700:400)+';color:'+(p.birdies>0?'var(--green-light)':'var(--text-muted)')+'">'+p.birdies+'</div>'+
+      '<div style="text-align:center;font-size:13px;font-weight:'+(p.eagles>0?700:400)+';color:'+(p.eagles>0?'#60A0E0':'var(--text-muted)')+'">'+p.eagles+'</div>'+
       '<div style="font-size:13px;text-align:center;font-weight:'+(p.wins>0?700:400)+';color:'+(p.wins>0?"var(--gold)":"var(--text-muted)")+'">'+p.wins+'</div>'+
       '<div style="font-size:13px;text-align:center;color:var(--text-secondary)">'+p.top3+'</div>'+
       '<div style="font-size:12px;text-align:center;color:var(--text-muted)">'+p.played+'</div>'+
@@ -627,26 +798,157 @@ function renderPts(){
   document.getElementById("v2").innerHTML='<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><p style="font-size:12px;color:var(--text-muted);letter-spacing:.02em">Points per NET finishing position. Tied players split combined points evenly.</p>'+(can("admin")?'<button class="btn" onclick="showModal(\'editPts\')">Edit</button>':'')+'</div><div class="pts-table"><div class="pts-row pts-row-hd"><span>Finish</span><span>Points</span></div>'+rows+'</div>';
 }
 
-function renderBoard(){
-  const posts=S.posts||[];const cats=[{id:"all",label:"All"},...CATS];
-  const fh=cats.map(c=>'<button class="fchip '+(S.boardFilter===c.id?"active":"")+'" onclick="setBoardFilter(\''+c.id+'\')">'+(c.label)+'</button>').join("");
-  const filtered=S.boardFilter==="all"?posts:posts.filter(p=>p.cat===S.boardFilter);
-  const sorted=[...filtered.filter(p=>p.pinned),...filtered.filter(p=>!p.pinned).sort((a,b)=>b.id-a.id)];
-  let ph='<div class="empty">No posts yet. Be the first to speak up.</div>';
-  if(sorted.length)ph=sorted.map(post=>{const ci=catInfo(post.cat),isUnread=!S.readPostIds.includes(post.id);return'<div class="post-card '+(post.pinned?"pinned":"")+" "+(isUnread?"unread":"")+'" onclick="navPost('+post.id+')"><div class="post-top">'+(post.pinned?'<span class="pin-icon">Pinned</span>':'')+(isUnread?'<span class="new-dot"></span>':'')+'<span class="post-cat '+ci.cls+'">'+ci.label+'</span><span style="font-size:11px;color:var(--text-muted);margin-left:auto">'+post.time+'</span></div><div class="post-title">'+post.title+'</div><div class="post-preview">'+post.body+'</div><div class="post-meta"><div class="post-author">'+avByName(post.author,18)+' '+post.author+'</div><div class="post-stats"><span style="display:flex;align-items:center;gap:3px;color:'+(post.likes&&post.likes.length>0?"var(--red)":"var(--text-muted)")+'">&#9825; '+(post.likes?post.likes.length:0)+'</span><span style="display:flex;align-items:center;gap:3px">&#128172; '+(post.comments?post.comments.length:0)+'</span></div></div></div>';}).join("");
-  document.getElementById("v3").innerHTML='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px"><p style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em">'+S.name+' · '+posts.length+' posts</p>'+(can("member")?'<button class="btn btn-gold" onclick="showModal(\'writePost\')">+ Write</button>':'')+'</div><div class="board-filter">'+fh+'</div><div class="post-list">'+ph+'</div>';
+// ── SCHEDULE / CALENDAR ──
+function getSeenGameIds(){
+  try{const v=localStorage.getItem("swmt_seen_games");return new Set(v?JSON.parse(v):[]);}catch(e){return new Set();}
+}
+function markGameSeen(gameId){
+  const s=getSeenGameIds();s.add(gameId);
+  try{localStorage.setItem("swmt_seen_games",JSON.stringify([...s]));}catch(e){}
+  updateScheduleBadge();
+}
+function getUnseenGameCount(){
+  const seen=getSeenGameIds();
+  return S.games.filter(g=>g.date&&!seen.has(g.id)).length;
+}
+function updateScheduleBadge(){
+  const b=document.getElementById("scheduleUnreadBadge");if(!b)return;
+  const c=getUnseenGameCount();
+  if(c>0){b.textContent=c>99?"99+":c;b.style.display="inline-flex";}
+  else b.style.display="none";
+}
+function getCalMonth(){
+  if(!S._calMonth){const n=new Date();S._calMonth={y:n.getFullYear(),m:n.getMonth()};}
+  return S._calMonth;
+}
+function calNav(delta){
+  const cm=getCalMonth();
+  let m=cm.m+delta,y=cm.y;
+  if(m<0){m=11;y--;}else if(m>11){m=0;y++;}
+  S._calMonth={y,m};renderSchedule();
+}
+function calToday(){
+  const n=new Date();S._calMonth={y:n.getFullYear(),m:n.getMonth()};
+  S._selectedDate=fmtDate(n);renderSchedule();
+}
+function fmtDate(d){
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+}
+function selectDate(dateStr){
+  S._selectedDate=dateStr;
+  const game=S.games.find(g=>g.date===dateStr);
+  if(game)markGameSeen(game.id);
+  renderSchedule();
 }
 
-function renderPostDetail(postId){
-  const post=S.posts.find(p=>p.id===postId);if(!post)return;S._postId=postId;markRead(postId);
-  const ci=catInfo(post.cat);
-  const likeKey=SESSION.role==="admin"?"admin":(SESSION.pid||0);
-  const liked=post.likes&&post.likes.includes(likeKey);
-  const comments=(post.comments||[]).map(c=>'<div class="comment-item">'+avByName(c.author,22)+'<div class="comment-body"><span class="comment-author">'+c.author+'</span><span class="comment-text"> '+c.text+'</span><span class="comment-time">'+c.time+'</span></div>'+(can("admin")?'<button class="btn-sm btn-red" style="flex-shrink:0" onclick="deleteComment('+postId+','+c.id+')">Del</button>':'')+'</div>').join("");
-  const cmtSection=can("member")
-    ?'<div style="margin-top:14px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:8px"><span style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em">Commenting as:</span><span style="font-size:12px;color:var(--gold);font-weight:600">'+SESSION.name+'</span></div><div class="comment-input-row"><textarea id="cmtText" placeholder="Your message..."></textarea><button class="btn btn-gold" style="white-space:nowrap" onclick="addComment('+postId+')">Post</button></div></div>'
-    :'<div style="padding:12px 0;text-align:center;font-size:12px;color:var(--text-muted)">Log in as a member to leave a comment.</div>';
-  document.getElementById("postDetailContent").innerHTML='<div class="post-detail-card"><div style="display:flex;align-items:center;gap:8px;margin-bottom:14px">'+(post.pinned?'<span class="pin-icon">Pinned</span>':'')+'<span class="post-cat '+ci.cls+'">'+ci.label+'</span><span style="font-size:11px;color:var(--text-muted);margin-left:auto">'+post.time+'</span>'+(can("admin")?'<button class="btn-sm btn-red" onclick="deletePost('+postId+')">Delete</button>':'')+'</div><div style="font-size:18px;font-weight:700;margin-bottom:12px;line-height:1.3;color:var(--text-primary)">'+post.title+'</div><div style="display:flex;align-items:center;gap:8px;margin-bottom:16px">'+avByName(post.author,26)+' <span style="font-size:13px;font-weight:600;color:var(--gold)">'+post.author+'</span></div><div class="post-detail-body">'+post.body+'</div><div style="display:flex;gap:8px;margin:16px 0;padding:12px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border)"><button class="like-btn '+(liked?"liked":"")+'" onclick="toggleLike('+postId+')">&#9825; Like '+(post.likes?post.likes.length:0)+'</button></div><div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:10px;text-transform:uppercase;letter-spacing:.06em">Comments '+(post.comments?post.comments.length:0)+'</div>'+(comments?'<div class="comment-box">'+comments+'</div>':'<div style="font-size:12px;color:var(--text-muted);margin-bottom:10px">No comments yet. Be the first.</div>')+cmtSection+'</div>';
+function renderSchedule(){
+  const cm=getCalMonth();
+  const monthNames=["January","February","March","April","May","June","July","August","September","October","November","December"];
+  const firstDay=new Date(cm.y,cm.m,1);
+  const lastDay=new Date(cm.y,cm.m+1,0);
+  const startDow=firstDay.getDay();
+  const daysInMonth=lastDay.getDate();
+  const today=fmtDate(new Date());
+  const seen=getSeenGameIds();
+  const gamesByDate={};
+  S.games.forEach(g=>{if(g.date)gamesByDate[g.date]=g;});
+
+  let cells="";
+  for(let i=0;i<startDow;i++)cells+='<div class="cal-cell empty"></div>';
+  for(let d=1;d<=daysInMonth;d++){
+    const ds=cm.y+"-"+String(cm.m+1).padStart(2,"0")+"-"+String(d).padStart(2,"0");
+    const g=gamesByDate[ds];
+    const cls=["cal-cell"];
+    if(ds===today)cls.push("today");
+    if(ds===S._selectedDate)cls.push("selected");
+    if(g)cls.push("has-game");
+    const badge=g&&!seen.has(g.id)?'<span class="cal-unread">!</span>':"";
+    const gameLabel=g?'<div class="cal-game-name">'+escapeHtml(g.name)+'</div>':'';
+    cells+='<div class="'+cls.join(" ")+'" onclick="selectDate(\''+ds+'\')">'+badge+'<div class="cal-day-num">'+d+'</div>'+gameLabel+'</div>';
+  }
+  // Pad trailing cells to fill last row
+  const totalCells=startDow+daysInMonth;
+  const trailing=(7-(totalCells%7))%7;
+  for(let i=0;i<trailing;i++)cells+='<div class="cal-cell empty"></div>';
+
+  const head='<div class="cal-head"><div class="cal-month">'+monthNames[cm.m]+' '+cm.y+'</div><div class="cal-nav"><button onclick="calNav(-1)">‹</button><button onclick="calToday()">Today</button><button onclick="calNav(1)">›</button></div></div>';
+  const dow='<div class="cal-dow"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div>';
+  const calendar='<div class="cal-wrap">'+head+dow+'<div class="cal-grid">'+cells+'</div></div>';
+
+  // Day detail panel below calendar
+  const detail=renderDayDetail(S._selectedDate);
+
+  // Add game button for admin (top right)
+  const addBtn=can("admin")?'<button class="btn btn-gold" style="font-size:12px" onclick="showModal(\'addGame\',{date:S._selectedDate||\'\'})">+ Add Game</button>':'';
+  const header='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px"><p style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em">Click a date to view or RSVP</p>'+addBtn+'</div>';
+
+  document.getElementById("v3").innerHTML=header+calendar+detail;
+}
+
+function renderDayDetail(dateStr){
+  if(!dateStr)return'<div class="day-detail day-detail-empty">Select a date on the calendar to see game details.</div>';
+  const game=S.games.find(g=>g.date===dateStr);
+  const d=new Date(dateStr+"T00:00:00");
+  const dayName=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][d.getDay()];
+  const monthName=["January","February","March","April","May","June","July","August","September","October","November","December"][d.getMonth()];
+  const fullDate=dayName+", "+monthName+" "+d.getDate()+", "+d.getFullYear();
+  if(!game){
+    const addBtn=can("admin")?'<div style="margin-top:14px;text-align:center"><button class="btn btn-gold" onclick="showModal(\'addGame\',{date:\''+dateStr+'\'})">+ Add Game on '+fullDate+'</button></div>':'';
+    return'<div class="day-detail day-detail-empty"><div style="font-size:13px;color:var(--text-secondary);margin-bottom:6px">'+fullDate+'</div>No game scheduled on this day.'+addBtn+'</div>';
+  }
+  return renderGameDay(game,fullDate);
+}
+
+function renderGameDay(g,fullDate){
+  if(!g.rsvps)g.rsvps={};
+  const myKey=getRsvpKey();
+  const myRsvp=myKey?g.rsvps[myKey]:null;
+  const editBtn=can("admin")?'<button class="btn-sm" onclick="showModal(\'editGame\','+g.id+')">Edit</button>':'';
+  const head='<div class="day-game-head"><div><div class="day-game-title">'+escapeHtml(g.name)+(g.done?' <span class="chip-done" style="margin-left:6px">Finalized</span>':'')+'</div><div class="day-game-when">'+fullDate+(g.teeTime?' · Tee time '+g.teeTime:"")+'</div></div>'+editBtn+'</div>';
+  const info='<div class="day-game-info"><div class="detail-item"><div class="detail-item-label">Date</div><div class="detail-item-val">'+(g.date||"—")+'</div></div><div class="detail-item"><div class="detail-item-label">Tee time</div><div class="detail-item-val">'+(g.teeTime||"—")+'</div></div></div>';
+
+  // RSVP section
+  let rsvpUI;
+  if(SESSION.role==="guest"){
+    rsvpUI='<div class="rsvp-section"><div class="rsvp-label">Your RSVP</div><div style="font-size:12px;color:var(--text-muted);padding:8px 0">Log in as a member to RSVP for this game.</div></div>';
+  }else if(SESSION.role==="admin"){
+    rsvpUI='<div class="rsvp-section"><div class="rsvp-label">Your RSVP</div><div style="font-size:12px;color:var(--text-muted);padding:8px 0">The Don does not RSVP. Toggle members\' status from the lists below if needed.</div></div>';
+  }else{
+    rsvpUI='<div class="rsvp-section"><div class="rsvp-label">Your RSVP</div><div class="rsvp-btns"><button class="rsvp-btn going '+(myRsvp==="going"?"active":"")+'" onclick="setRsvp('+g.id+',\'going\')">✓ Going</button><button class="rsvp-btn notgoing '+(myRsvp==="not_going"?"active":"")+'" onclick="setRsvp('+g.id+',\'not_going\')">✕ Not Going</button>'+(myRsvp?'<button class="rsvp-btn clear" onclick="setRsvp('+g.id+',null)">Clear</button>':'')+'</div></div>';
+  }
+
+  // Three lists
+  const going=[],notGoing=[],pending=[];
+  S.players.forEach(p=>{
+    const key="member:"+p.id;
+    const r=g.rsvps[key];
+    if(r==="going")going.push(p);
+    else if(r==="not_going")notGoing.push(p);
+    else pending.push(p);
+  });
+  const renderList=(title,arr,cls)=>{
+    const items=arr.length?arr.map(p=>{
+      const isMe=SESSION.pid===p.id;
+      return'<div class="rsvp-name '+(isMe?"me":"")+'">'+av(p,22)+'<span>'+escapeHtml(p.firstName+" "+p.lastName)+(isMe?' (you)':'')+'</span></div>';
+    }).join(""):'<div class="rsvp-empty">No one yet</div>';
+    return'<div class="rsvp-list '+cls+'"><div class="rsvp-list-head"><span>'+title+'</span><span class="rsvp-count">'+arr.length+'</span></div><div class="rsvp-name-list">'+items+'</div></div>';
+  };
+  const lists='<div class="rsvp-lists">'+renderList("✓ Going",going,"going")+renderList("✕ Not Going",notGoing,"notgoing")+renderList("Pending",pending,"pending")+'</div>';
+
+  return'<div class="day-detail">'+head+info+rsvpUI+lists+'</div>';
+}
+
+function getRsvpKey(){
+  if(SESSION.role==="member"&&SESSION.pid)return"member:"+SESSION.pid;
+  return null;
+}
+function setRsvp(gameId,status){
+  const g=S.games.find(x=>x.id===gameId);if(!g)return;
+  if(!g.rsvps)g.rsvps={};
+  const key=getRsvpKey();if(!key){alert("Log in as a member to RSVP.");return;}
+  if(status===null)delete g.rsvps[key];
+  else g.rsvps[key]=status;
+  save();renderSchedule();
 }
 
 function renderProfiles(){
@@ -679,66 +981,75 @@ function renderDetail(pid){
   document.getElementById("detailContent").innerHTML='<div class="detail-card"><div style="display:flex;align-items:center;gap:16px;margin-bottom:1.25rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border)">'+ph+'<div style="flex:1"><div style="font-size:18px;font-weight:700;margin-bottom:4px;color:var(--text-primary)">'+p.firstName+' '+p.lastName+'</div><div style="font-size:12px;color:var(--gold);font-weight:500">'+(p.handicap!=null?p.handicap+' HCP':"—")+'</div></div>'+editBtn+'</div><div class="detail-grid"><div class="detail-item"><div class="detail-item-label">Birthday</div><div class="detail-item-val">'+(p.birthday||"—")+'</div></div><div class="detail-item"><div class="detail-item-label">Member since</div><div class="detail-item-val">'+(p.joinYear||"—")+'</div></div><div class="detail-item"><div class="detail-item-label">Handicap</div><div class="detail-item-val" style="color:var(--gold)">'+(p.handicap!=null?p.handicap:"—")+'</div></div><div class="detail-item"><div class="detail-item-label">Games played</div><div class="detail-item-val">'+st.played+'</div></div></div><div class="season-stats"><div class="sstat"><div class="sstat-val" style="color:var(--gold)">'+st.total+'</div><div class="sstat-label">Season pts</div></div><div class="sstat"><div class="sstat-val" style="color:var(--gold-light)">'+st.wins+'</div><div class="sstat-label">Wins</div></div><div class="sstat"><div class="sstat-val">'+st.top3+'</div><div class="sstat-label">Top 3</div></div></div><div style="margin-top:1rem"><div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px">Awards &amp; achievements</div>'+aw+'</div>'+bio+'</div>';
 }
 
-function setBoardFilter(cat){S.boardFilter=cat;renderBoard();}
-function navPost(id){S._postId=id;renderPostDetail(id);nav("postDetail");}
-function toggleLike(postId){
-  const post=S.posts.find(p=>p.id===postId);if(!post)return;
-  if(!SESSION.loggedIn){alert("Log in to like posts.");return;}
-  if(!post.likes)post.likes=[];
-  const key=SESSION.role==="admin"?"admin":(SESSION.pid||0);
-  const idx=post.likes.indexOf(key);
-  if(idx>=0)post.likes.splice(idx,1);else post.likes.push(key);
-  renderPostDetail(postId);save();
-}
-function addComment(postId){
-  const post=S.posts.find(p=>p.id===postId);if(!post)return;
-  if(!can("member")){alert("Log in as a member to comment.");return;}
-  const text=(document.getElementById("cmtText").value||"").trim();
-  if(!text)return;
-  if(!post.comments)post.comments=[];
-  const now=new Date();
-  post.comments.push({id:newId(post.comments),author:SESSION.name,text,time:now.getHours().toString().padStart(2,"0")+":"+now.getMinutes().toString().padStart(2,"0")});
-  renderPostDetail(postId);save();
-}
-function deleteComment(postId,cid){const post=S.posts.find(p=>p.id===postId);if(!post||!can("admin"))return;post.comments=post.comments.filter(c=>c.id!==cid);renderPostDetail(postId);save();}
-function deletePost(postId){if(!can("admin"))return;if(!confirm("Delete this post?"))return;S.posts=S.posts.filter(p=>p.id!==postId);setView(3,document.getElementById("vtab3"));save();}
-function nav(page){document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));const pg=document.getElementById("page"+page.charAt(0).toUpperCase()+page.slice(1));if(pg)pg.classList.add("active");if(page==="profiles")renderProfiles();if(page==="main")renderAll();if(page==="postDetail"&&S._postId!=null)renderPostDetail(S._postId);}
+function nav(page){document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));const pg=document.getElementById("page"+page.charAt(0).toUpperCase()+page.slice(1));if(pg)pg.classList.add("active");if(page==="profiles")renderProfiles();if(page==="main")renderAll();}
 function navDetail(pid){S._detailPid=pid;renderDetail(pid);nav("detail");}
-function setView(i,el){S.view=i;document.querySelectorAll(".vtab").forEach(t=>{t.classList.remove("active");t.classList.remove("active-gold");});if(el)el.classList.add("active");[0,1,2,3].forEach(n=>document.getElementById("v"+n).style.display=n===i?"":"none");document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));document.getElementById("pageMain").classList.add("active");renderAll();}
+function setView(i,el){
+  S.view=i;
+  document.querySelectorAll(".vtab").forEach(t=>{t.classList.remove("active");t.classList.remove("active-gold");});
+  if(el)el.classList.add("active");
+  [0,1,2,3,4,5].forEach(n=>{const v=document.getElementById("v"+n);if(v)v.style.display=n===i?"":"none";});
+  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+  document.getElementById("pageMain").classList.add("active");
+  if(i===3&&!S._selectedDate){const today=fmtDate(new Date());const todayGame=S.games.find(g=>g.date===today);if(todayGame)S._selectedDate=today;}
+  renderAll();
+  if(i===4)markChatRead();
+  if(i===5)markMomentsRead();
+}
 function setGame(i){S.game=i;renderGames();}
 function finalizeGame(gid){const g=S.games.find(x=>x.id===gid);if(!g)return;if(!Object.values(g.scores).some(v=>v!=null&&v!=""))return alert("Please enter at least one score.");if(!confirm("Finalize "+g.name+" and award points?"))return;g.done=true;renderAll();if(document.querySelector("#pageScorecard.active"))renderScorecard(gid);}
 function reopenGame(gid){if(!confirm("Reopen this game?"))return;const g=S.games.find(x=>x.id===gid);if(g){g.done=false;renderAll();if(document.querySelector("#pageScorecard.active"))renderScorecard(gid);}}
 function openEdit(id){S._ep=id;showModal("editPlayer",S.players.find(x=>x.id===id));}
 function adminThenProfile(pid){S._ep=pid;S._adminNext="profile";showModal("adminPin");}
-function checkPin(){const pin=document.getElementById("mAdminPin").value;if(pin===ADMIN_PIN){setSession(null,"admin","Admin");closeModal();if(S._adminNext==="profile"){S._adminNext=null;setTimeout(()=>renderDetail(S._ep),50);}else setTimeout(()=>openEdit(S._ep),50);updateUserBar();const ab=document.getElementById("adminButtons");if(ab)ab.style.display="flex";}else alert("Incorrect PIN. Access denied.");}
+function checkPin(){const pin=document.getElementById("mAdminPin").value;if(pin===ADMIN_PIN){setSession(null,"admin","The Don");closeModal();if(S._adminNext==="profile"){S._adminNext=null;setTimeout(()=>renderDetail(S._ep),50);}else setTimeout(()=>openEdit(S._ep),50);updateUserBar();const ab=document.getElementById("adminButtons");if(ab)ab.style.display="flex";}else alert("Incorrect PIN. Access denied.");}
 function showModal(type,data){
   const area=document.getElementById("modalArea");
   const wrap=(inner)=>'<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal">'+inner+'</div></div>';
-  if(type==="writePost"){
-    const co=CATS.map(c=>'<option value="'+c.id+'">'+c.label+'</option>').join("");
-    const authorHtml=can("admin")
-      ?'<div class="fg"><label>Author</label><select id="pwWho">'+S.players.map(p=>'<option'+(SESSION.pid===p.id?' selected':'')+'>'+p.firstName+" "+p.lastName+'</option>').join("")+'</select></div>'
-      :'<input type="hidden" id="pwWho" value="'+SESSION.name+'">';
-    area.innerHTML=wrap('<h2>Write a Post</h2>'+authorHtml+'<div class="fg"><label>Category</label><select id="pwCat">'+co+'</select></div><div class="fg"><label>Title</label><input id="pwTitle" type="text" placeholder="Enter a title"></div><div class="fg"><label>Content</label><textarea id="pwBody" style="min-height:120px" placeholder="Write your message..."></textarea></div>'+(can("admin")?'<div class="fg"><label style="display:flex;align-items:center;gap:6px;color:var(--gold)"><input type="checkbox" id="pwPin" style="width:auto;padding:0;accent-color:var(--gold)"> Pin as notice</label></div>':'')+'<div class="row-btns"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-gold" onclick="confirmPost()">Post</button></div>');
-  }
-  else if(type==="addPlayer"){area.innerHTML=wrap('<h2>Add Player</h2><div class="fg"><label>First name <span style="color:var(--red)">*</span></label><input id="mFn" type="text"></div><div class="fg"><label>Last name</label><input id="mLn" type="text"></div><div class="fg"><label>Phone <span style="color:var(--red)">*</span> <span style="font-size:10px;color:var(--text-muted)">e.g. +16041234567</span></label><input id="mPh" type="tel" placeholder="+16041234567"></div><div class="fg"><label>Email <span style="color:var(--red)">*</span></label><input id="mEm" type="email" placeholder="name@email.com"></div><div class="fg"><label>Handicap</label><input id="mHcp" type="number" min="0" max="200"></div><div class="fg"><label>Birthday (e.g. Jan 15)</label><input id="mBd" type="text" placeholder="Jan 15"></div><div class="fg"><label>Member since (year)</label><input id="mJy" type="number" placeholder="2020"></div><div class="row-btns"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-gold" onclick="confirmAdd()">Add</button></div>');}
+  if(type==="addPlayer"){area.innerHTML=wrap('<h2>Add Player</h2><div class="fg"><label>First name <span style="color:var(--red)">*</span></label><input id="mFn" type="text"></div><div class="fg"><label>Last name</label><input id="mLn" type="text"></div><div class="fg"><label>Phone <span style="color:var(--red)">*</span> <span style="font-size:10px;color:var(--text-muted)">e.g. +16041234567</span></label><input id="mPh" type="tel" placeholder="+16041234567"></div><div class="fg"><label>Email <span style="color:var(--red)">*</span></label><input id="mEm" type="email" placeholder="name@email.com"></div><div class="fg"><label>Handicap</label><input id="mHcp" type="number" min="0" max="200"></div><div class="fg"><label>Birthday (e.g. Jan 15)</label><input id="mBd" type="text" placeholder="Jan 15"></div><div class="fg"><label>Member since (year)</label><input id="mJy" type="number" placeholder="2020"></div><div class="row-btns"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-gold" onclick="confirmAdd()">Add</button></div>');}
   else if(type==="editPlayer"&&data){const hv=data.handicap!=null?data.handicap:"";area.innerHTML=wrap('<h2>Edit Player</h2><div class="fg"><label>First name</label><input id="mFn" type="text" value="'+data.firstName+'"></div><div class="fg"><label>Last name</label><input id="mLn" type="text" value="'+data.lastName+'"></div><div class="fg"><label>Phone</label><input id="mPh" type="tel" value="'+(data.phone||'')+'" placeholder="+16041234567"></div><div class="fg"><label>Email</label><input id="mEm" type="email" value="'+(data.email||'')+'" placeholder="name@email.com"></div><div class="fg"><label>Handicap <span style="color:var(--gold)">(Admin only)</span></label><input id="mHcp" type="number" value="'+hv+'" min="0" max="200" '+(can("admin")?'':'readonly style="opacity:.35;cursor:not-allowed"')+'></div><div class="row-btns"><button class="btn btn-red" onclick="removePlayer()">Remove</button><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-gold" onclick="confirmEdit()">Save</button></div>');}
   else if(type==="editProfile"){const pid=typeof data==="number"?data:S._ep;const p=S.players.find(x=>x.id===pid);if(!p)return;S._ep=pid;area.innerHTML=wrap('<h2>Edit Profile</h2><div class="fg"><label>First name</label><input id="mFn" type="text" value="'+p.firstName+'"></div><div class="fg"><label>Last name</label><input id="mLn" type="text" value="'+p.lastName+'"></div><div class="fg"><label>Phone <span style="color:var(--red)">*</span> <span style="font-size:10px;color:var(--text-muted)">e.g. +16041234567</span></label><input id="mPh" type="tel" value="'+(p.phone||'')+'" placeholder="+16041234567"></div><div class="fg"><label>Email <span style="color:var(--red)">*</span></label><input id="mEm" type="email" value="'+(p.email||'')+'" placeholder="name@email.com"></div><div class="fg"><label>Handicap</label><input id="mHcp" type="number" value="'+(p.handicap!=null?p.handicap:"")+'" min="0" max="200"></div><div class="fg"><label>Birthday (e.g. Jan 15)</label><input id="mBd" type="text" value="'+(p.birthday||"")+'"></div><div class="fg"><label>Member since</label><input id="mJy" type="number" value="'+(p.joinYear||"")+'"></div><div class="fg"><label>Awards (comma separated)</label><input id="mAw" type="text" value="'+(p.awards?p.awards.join(", "):"")+'" placeholder="2023 Champion, Most Improved"></div><div class="fg"><label>Bio</label><textarea id="mBio">'+(p.bio||"")+'</textarea></div><div class="row-btns"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-gold" onclick="confirmEditProfile()">Save</button></div>');}
-  else if(type==="adminPin"){area.innerHTML=wrap('<h2>Admin Access</h2><p style="font-size:12px;color:var(--text-muted);margin-bottom:14px;line-height:1.5">Enter your Admin PIN to unlock restricted settings.</p><div class="fg"><label>PIN</label><input id="mAdminPin" type="password" placeholder="••••"></div><div class="row-btns"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-gold" onclick="checkPin()">Confirm</button></div>');}
-  else if(type==="addGame"){area.innerHTML=wrap('<h2>Add Game</h2><div class="fg"><label>Game name</label><input id="mGn" type="text" placeholder="e.g. Spring Classic"></div><div class="row-btns"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-gold" onclick="confirmGame()">Add</button></div>');}
+  else if(type==="adminPin"){area.innerHTML=wrap('<h2>The Don\'s PIN</h2><p style="font-size:12px;color:var(--text-muted);margin-bottom:14px;line-height:1.5">Enter The Don\'s PIN to unlock restricted settings.</p><div class="fg"><label>PIN</label><input id="mAdminPin" type="password" placeholder="••••"></div><div class="row-btns"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-gold" onclick="checkPin()">Confirm</button></div>');}
+  else if(type==="addGame"){
+    const presetDate=(data&&data.date)||"";
+    area.innerHTML=wrap('<h2>Add Game</h2><div class="fg"><label>Game name</label><input id="mGn" type="text" placeholder="e.g. Spring Classic"></div><div class="fg"><label>Date</label><input id="mGd" type="date" value="'+presetDate+'"></div><div class="fg"><label>Tee time</label><input id="mGt" type="time" value="08:00"></div><div class="row-btns"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-gold" onclick="confirmGame()">Add</button></div>');
+  }
+  else if(type==="editGame"&&data){
+    const g=S.games.find(x=>x.id===data);if(!g)return;S._eg=data;
+    area.innerHTML=wrap('<h2>Edit Game</h2><div class="fg"><label>Game name</label><input id="mGn" type="text" value="'+escapeHtml(g.name||"")+'"></div><div class="fg"><label>Date</label><input id="mGd" type="date" value="'+(g.date||"")+'"></div><div class="fg"><label>Tee time</label><input id="mGt" type="time" value="'+(g.teeTime||"08:00")+'"></div><div class="row-btns"><button class="btn btn-red" onclick="removeGame()">Delete</button><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-gold" onclick="confirmEditGame()">Save</button></div>');
+  }
   else if(type==="settings"){area.innerHTML=wrap('<h2>Settings</h2><div class="fg"><label>Tour name</label><input id="mTn" type="text" value="'+S.name+'"></div><div class="fg"><label>Total games in season</label><input id="mTg" type="number" value="'+S.totalGames+'" min="1" max="30"></div><div class="row-btns"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-gold" onclick="confirmSettings()">Save</button></div>');}
   else if(type==="joinRequest"){area.innerHTML=wrap('<h2>Request to Join</h2><p style="font-size:12px;color:var(--text-muted);margin-bottom:14px;line-height:1.5">Fill in your details below. An admin will review and approve your request.</p><div class="fg"><label>First name <span style="color:var(--red)">*</span></label><input id="jFn" type="text"></div><div class="fg"><label>Last name</label><input id="jLn" type="text"></div><div class="fg"><label>Phone <span style="color:var(--red)">*</span> <span style="font-size:10px;color:var(--text-muted)">e.g. +16041234567</span></label><input id="jPh" type="tel" placeholder="+16041234567"></div><div class="fg"><label>Email <span style="color:var(--red)">*</span></label><input id="jEm" type="email" placeholder="name@email.com"></div><div class="fg"><label>Choose a 4-digit PIN <span style="color:var(--red)">*</span> <span style="font-size:10px;color:var(--text-muted)">You will use this to log in</span></label><input id="jPin" type="password" maxlength="4" pattern="[0-9]{4}" placeholder="••••" inputmode="numeric"></div><div class="fg"><label>Handicap</label><input id="jHcp" type="number" min="0" max="200" placeholder="optional"></div><div class="fg"><label>Birthday <span style="font-size:10px;color:var(--text-muted)">e.g. Jan 15</span></label><input id="jBd" type="text" placeholder="Jan 15"></div><div class="fg"><label>Member since (year)</label><input id="jJy" type="number" placeholder="2024"></div><div class="row-btns"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-gold" onclick="confirmJoinRequest()">Submit Request</button></div>');}
   else if(type==="editPts"){const inputs=S.pointsTable.slice(0,20).map((v,i)=>'<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span style="font-size:11px;color:var(--text-muted);width:60px;text-transform:uppercase;letter-spacing:.03em">'+(i+1)+(i===0?"st":i===1?"nd":i===2?"rd":"th")+'</span><input type="number" id="pt'+i+'" value="'+v+'" style="width:80px" min="0"></div>').join("");area.innerHTML=wrap('<h2>Edit Points Table</h2>'+inputs+'<div class="row-btns"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-gold" onclick="confirmPts()">Save</button></div>');}
 }
 function closeModal(){document.getElementById("modalArea").innerHTML="";}
 function reqAdmin(){closeModal();setTimeout(()=>showModal("adminPin"),50);}
-function confirmPost(){const title=(document.getElementById("pwTitle").value||"").trim();const body=(document.getElementById("pwBody").value||"").trim();const who=document.getElementById("pwWho").value||"Guest";const cat=document.getElementById("pwCat").value||"general";const pinEl=document.getElementById("pwPin");const pinned=pinEl&&pinEl.checked;if(!title||!body)return alert("Please enter a title and content.");const now=new Date();const ds=now.getFullYear()+"-"+(now.getMonth()+1).toString().padStart(2,"0")+"-"+now.getDate().toString().padStart(2,"0");if(!S.posts)S.posts=[];const np={id:newId(S.posts),author:who,cat,title,body,pinned,likes:[],comments:[],time:ds};S.posts.unshift(np);S.readPostIds.push(np.id);save();closeModal();renderAll();if(CONFIG.appsScriptUrl)notifyAll(np);}
 function confirmAdd(){const fn=(document.getElementById("mFn").value||"").trim();if(!fn)return alert("First name is required.");const ph=(document.getElementById("mPh").value||"").trim();const em=(document.getElementById("mEm").value||"").trim();if(!ph)return alert("Phone number is required.");if(!em||!em.includes("@"))return alert("Valid email address is required.");const id=Math.max(0,...S.players.map(p=>p.id))+1;const hcp=document.getElementById("mHcp").value;S.players.push({id,firstName:fn,lastName:(document.getElementById("mLn").value||"").trim(),phone:ph,email:em,handicap:hcp?Number(hcp):null,birthday:(document.getElementById("mBd").value||"").trim(),joinYear:Number(document.getElementById("mJy").value)||null,awards:[],bio:"",photo:null});closeModal();renderAll();}
 function confirmEdit(){const p=S.players.find(x=>x.id===S._ep);if(!p)return;p.firstName=(document.getElementById("mFn").value||p.firstName).trim();p.lastName=(document.getElementById("mLn").value||p.lastName).trim();const ph=document.getElementById("mPh");const em=document.getElementById("mEm");if(ph&&ph.value.trim())p.phone=ph.value.trim();if(em&&em.value.trim())p.email=em.value.trim();if(can("admin")){const h=document.getElementById("mHcp").value;p.handicap=h!=""?Number(h):null;}closeModal();renderAll();}
 function confirmEditProfile(){const p=S.players.find(x=>x.id===S._ep);if(!p)return;p.firstName=(document.getElementById("mFn").value||p.firstName).trim();p.lastName=(document.getElementById("mLn").value||p.lastName).trim();const ph=(document.getElementById("mPh").value||"").trim();const em=(document.getElementById("mEm").value||"").trim();if(!ph)return alert("Phone number is required.");if(!em||!em.includes("@"))return alert("Valid email address is required.");p.phone=ph;p.email=em;const h=document.getElementById("mHcp").value;p.handicap=h!=""?Number(h):null;p.birthday=(document.getElementById("mBd").value||"").trim();const jy=document.getElementById("mJy").value;p.joinYear=jy?Number(jy):null;const aw=document.getElementById("mAw").value;p.awards=aw?aw.split(",").map(a=>a.trim()).filter(Boolean):[];p.bio=(document.getElementById("mBio").value||"").trim();closeModal();renderDetail(p.id);renderAll();}
 function removePlayer(){if(!confirm("Remove this player from the family?"))return;S.players=S.players.filter(x=>x.id!==S._ep);closeModal();renderAll();}
-function confirmGame(){const name=(document.getElementById("mGn").value||"").trim()||"Game "+(S.games.length+1);S.games.push({id:S.games.length+1,name,done:false,scores:{},holes:{},pars:DEFAULT_PARS.slice()});S.totalGames=S.games.length;closeModal();renderAll();}
-function confirmSettings(){S.name=(document.getElementById("mTn").value||S.name).trim();const tg=parseInt(document.getElementById("mTg").value)||S.totalGames;for(let i=S.games.length;i<tg;i++)S.games.push({id:i+1,name:"Game "+(i+1),done:false,scores:{},holes:{},pars:DEFAULT_PARS.slice()});S.totalGames=tg;closeModal();renderAll();}
+function confirmGame(){
+  const name=(document.getElementById("mGn").value||"").trim()||"Game "+(S.games.length+1);
+  const date=(document.getElementById("mGd").value||"").trim();
+  const teeTime=(document.getElementById("mGt").value||"").trim();
+  const newGameId=newId(S.games);
+  S.games.push({id:newGameId,name,date,teeTime,done:false,scores:{},holes:{},pars:DEFAULT_PARS.slice(),rsvps:{},addedAt:Date.now()});
+  S.totalGames=S.games.length;
+  closeModal();renderAll();
+}
+function confirmEditGame(){
+  const g=S.games.find(x=>x.id===S._eg);if(!g)return;
+  g.name=(document.getElementById("mGn").value||g.name).trim();
+  g.date=(document.getElementById("mGd").value||"").trim();
+  g.teeTime=(document.getElementById("mGt").value||"").trim();
+  closeModal();renderAll();
+}
+function removeGame(){
+  if(!confirm("Delete this game? All scores and RSVPs will be lost."))return;
+  S.games=S.games.filter(x=>x.id!==S._eg);
+  S.totalGames=S.games.length;
+  S._selectedDate=null;
+  closeModal();renderAll();
+}
+function confirmSettings(){S.name=(document.getElementById("mTn").value||S.name).trim();const tg=parseInt(document.getElementById("mTg").value)||S.totalGames;for(let i=S.games.length;i<tg;i++)S.games.push({id:newId(S.games),name:"Game "+(i+1),done:false,scores:{},holes:{},pars:DEFAULT_PARS.slice(),rsvps:{},date:"",teeTime:"",addedAt:Date.now()});S.totalGames=tg;closeModal();renderAll();}
 function confirmPts(){S.pointsTable=S.pointsTable.map((_,i)=>{const el=document.getElementById("pt"+i);return el?Number(el.value)||0:0;});closeModal();renderAll();}
 function confirmJoinRequest(){
   const fn=(document.getElementById("jFn").value||"").trim();
@@ -752,7 +1063,7 @@ function confirmJoinRequest(){
   const req={id:Date.now(),firstName:fn,lastName:(document.getElementById("jLn").value||"").trim(),phone:ph,email:em,pin,handicap:document.getElementById("jHcp").value?Number(document.getElementById("jHcp").value):null,birthday:(document.getElementById("jBd").value||"").trim(),joinYear:Number(document.getElementById("jJy").value)||new Date().getFullYear(),requestedAt:new Date().toISOString().slice(0,10),status:"pending"};
   S.pendingMembers.push(req);save();closeModal();
   if(CONFIG.appsScriptUrl)notifyAdmin(req);
-  alert("Request submitted! An admin will review it shortly.");
+  alert("Request submitted! The Don will review it shortly.");
 }
 function approveMember(id){
   const idx=S.pendingMembers.findIndex(r=>r.id===id);if(idx<0)return;
@@ -780,10 +1091,12 @@ function can(action){
 // ── LOGIN SYSTEM ─────────────────────────────────────────────────
 let _pinBuffer="",_loginPid=null;
 
-function renderLoginMemberList(){
-  const list=document.getElementById("loginMemberList");if(!list)return;
+function showLoginModal(){
+  _pinBuffer="";_loginPid=null;
+  const area=document.getElementById("modalArea");
   const items=S.players.map(p=>'<div class="member-pick-item" onclick="loginSelectMember('+p.id+')">'+avByName(p.firstName+" "+p.lastName,28)+'<div class="member-pick-name">'+p.firstName+" "+p.lastName+'</div></div>').join("");
-  list.innerHTML='<div class="member-pick-item" style="border-color:var(--gold-dark)" onclick="loginAsAdmin()"><div style="width:28px;height:28px;border-radius:50%;background:var(--gold);color:#000;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">A</div><div class="member-pick-name" style="color:var(--gold)">Admin</div></div>'+items;
+  const adminItem='<div class="member-pick-item" style="border-color:var(--gold-dark)" onclick="loginAsAdmin()"><div style="width:28px;height:28px;border-radius:50%;background:var(--gold);color:#000;font-size:13px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0">👑</div><div class="member-pick-name" style="color:var(--gold)">The Don</div></div>';
+  area.innerHTML='<div class="modal-overlay" onclick="if(event.target===this)closeModal()"><div class="modal"><h2>Sign In</h2><div id="loginStep1"><div class="login-section-label">Who are you?</div><div class="member-pick-list">'+adminItem+items+'</div></div><div id="loginStep2" style="display:none"><div class="pin-header"><div class="pin-selected-name" id="loginSelectedName"></div><div style="font-size:11px;color:var(--text-muted)">Enter your 4-digit PIN</div></div><div class="pin-dots"><div class="pin-dot" id="pd0"></div><div class="pin-dot" id="pd1"></div><div class="pin-dot" id="pd2"></div><div class="pin-dot" id="pd3"></div></div><div class="pin-pad"><button class="pin-key" onclick="pinKey(\'1\')">1</button><button class="pin-key" onclick="pinKey(\'2\')">2</button><button class="pin-key" onclick="pinKey(\'3\')">3</button><button class="pin-key" onclick="pinKey(\'4\')">4</button><button class="pin-key" onclick="pinKey(\'5\')">5</button><button class="pin-key" onclick="pinKey(\'6\')">6</button><button class="pin-key" onclick="pinKey(\'7\')">7</button><button class="pin-key" onclick="pinKey(\'8\')">8</button><button class="pin-key" onclick="pinKey(\'9\')">9</button><button class="pin-key" onclick="loginStep1Back()" style="font-size:13px;color:var(--text-muted)">← Back</button><button class="pin-key" onclick="pinKey(\'0\')">0</button><button class="pin-key" onclick="pinKey(\'del\')" style="font-size:14px">⌫</button></div></div><div class="row-btns"><button class="btn" onclick="closeModal()">Cancel</button></div></div></div>';
 }
 
 function loginSelectMember(pid){
@@ -795,15 +1108,15 @@ function loginSelectMember(pid){
 
 function loginAsAdmin(){
   _loginPid="admin";_pinBuffer="";
-  document.getElementById("loginSelectedName").textContent="Admin";
+  document.getElementById("loginSelectedName").textContent="The Don";
   updatePinDots();showLoginStep(2);
 }
 
-function loginAsGuest(){setSession(null,"guest","Guest");enterApp();}
-
 function showLoginStep(n){
-  document.getElementById("loginStep1").style.display=n===1?"block":"none";
-  document.getElementById("loginStep2").style.display=n===2?"block":"none";
+  const s1=document.getElementById("loginStep1");
+  const s2=document.getElementById("loginStep2");
+  if(s1)s1.style.display=n===1?"block":"none";
+  if(s2)s2.style.display=n===2?"block":"none";
 }
 
 function loginStep1Back(){_pinBuffer="";_loginPid=null;updatePinDots();showLoginStep(1);}
@@ -821,7 +1134,7 @@ function updatePinDots(){
 
 function verifyPin(){
   if(_loginPid==="admin"){
-    if(_pinBuffer===ADMIN_PIN){setSession(null,"admin","Admin");enterApp();}else pinError();
+    if(_pinBuffer===ADMIN_PIN){setSession(null,"admin","The Don");enterApp();}else pinError();
     return;
   }
   const p=S.players.find(x=>x.id===_loginPid);
@@ -837,52 +1150,581 @@ function pinError(){
 
 function setSession(pid,role,name){
   SESSION={pid,role,name,loggedIn:true};
-  sessionStorage.setItem("swmt_session",JSON.stringify(SESSION));
+  localStorage.setItem("swmt_session",JSON.stringify(SESSION));
 }
 
 function enterApp(){
-  document.getElementById("pageLogin").classList.remove("active");
-  document.getElementById("pageMain").classList.add("active");
+  closeModal();
   const ab=document.getElementById("adminButtons");if(ab)ab.style.display=can("admin")?"flex":"none";
   updateUserBar();renderAll();
 }
 
 function logout(){
   SESSION={pid:null,role:"guest",name:"Guest",loggedIn:false};
-  sessionStorage.removeItem("swmt_session");
-  _pinBuffer="";_loginPid=null;updatePinDots();
-  document.getElementById("pageMain").classList.remove("active");
-  document.querySelectorAll(".page").forEach(p=>{if(p.id!=="pageLogin")p.classList.remove("active");});
-  document.getElementById("pageLogin").classList.add("active");
+  localStorage.removeItem("swmt_session");
+  _pinBuffer="";_loginPid=null;
   const ab=document.getElementById("adminButtons");if(ab)ab.style.display="none";
-  showLoginStep(1);renderLoginMemberList();
+  updateUserBar();renderAll();
 }
 
 function updateUserBar(){
   const name=document.getElementById("userBarName");
   const roleEl=document.getElementById("userBarRole");
   const av=document.getElementById("userBarAvatar");
+  const right=document.getElementById("userBarRight");
   if(name)name.textContent=SESSION.name;
   if(roleEl){
-    roleEl.textContent=SESSION.role==="admin"?"Admin":SESSION.role==="member"?"Member":"Guest";
+    roleEl.textContent=SESSION.role==="admin"?"The Don":SESSION.role==="member"?"Member":"Guest";
     roleEl.className="role-badge "+SESSION.role;
   }
-  if(av)av.innerHTML=SESSION.pid?avByName(SESSION.name,24):'<div style="width:24px;height:24px;border-radius:50%;background:var(--border);display:inline-flex;align-items:center;justify-content:center;font-size:11px;color:var(--text-muted)">G</div>';
+  if(av)av.innerHTML=SESSION.pid||SESSION.role==="admin"?avByName(SESSION.name,24):'<div style="width:24px;height:24px;border-radius:50%;background:var(--border);display:inline-flex;align-items:center;justify-content:center;font-size:11px;color:var(--text-muted)">G</div>';
+  if(right){
+    if(SESSION.role==="guest"){
+      right.innerHTML='<button class="btn btn-gold btn-sm" onclick="showLoginModal()" style="font-size:11px;padding:4px 12px">Login</button>';
+    }else{
+      right.innerHTML='<button class="btn-sm" onclick="logout()">Logout</button>';
+    }
+  }
 }
 
-if(!load()){initPlayers();initGames();initPosts();}
-// Restore or start session
+if(!load()){initPlayers();initGames();}
+// State objects declared before enterApp() to avoid TDZ errors in renderAll()
+let CHAT={msgs:[],ready:false,error:null,db:null,ref:null,unread:0,seenIds:new Set()};
+let MOMENTS={items:[],ready:false,error:null,_app:null,db:null,_storage:null,unread:0,_seenIds:null};
+// Restore saved session if any; default is guest (already set in SESSION init)
 (()=>{
-  const saved=sessionStorage.getItem("swmt_session");
-  if(saved){try{Object.assign(SESSION,JSON.parse(saved));enterApp();}catch(e){renderLoginPage();}}
-  else{renderLoginPage();}
-  function renderLoginPage(){
-    renderLoginMemberList();
-    const heroImg=document.querySelector(".hero-logo");
-    const loginImg=document.getElementById("loginLogoImg");
-    if(heroImg&&loginImg)loginImg.src=heroImg.src;
+  const saved=localStorage.getItem("swmt_session");
+  if(saved){
+    try{
+      const parsed=JSON.parse(saved);
+      // Validate that the player still exists for member sessions
+      if(parsed.role==="member"&&parsed.pid&&!S.players.find(p=>p.id===parsed.pid)){
+        localStorage.removeItem("swmt_session");
+      }else{
+        Object.assign(SESSION,parsed);
+      }
+    }catch(e){localStorage.removeItem("swmt_session");}
   }
+  enterApp();
 })();
+
+// ── GROUP CHAT (Firebase Realtime DB) ──
+function chatConfigured(){
+  const f=CONFIG.firebase;
+  return !!(f&&f.apiKey&&f.databaseURL&&f.projectId);
+}
+
+function getChatNickname(){
+  if(SESSION.role==="admin")return{name:"The Don",role:"admin"};
+  if(SESSION.role==="member"&&SESSION.pid){
+    const p=S.players.find(x=>x.id===SESSION.pid);
+    if(p)return{name:p.firstName+" "+p.lastName,role:"member",pid:p.id};
+  }
+  // Guest: read or prompt for a nickname (saved in localStorage)
+  let nick=localStorage.getItem("swmt_guest_nick");
+  return{name:nick||"",role:"guest"};
+}
+
+function setGuestNickname(){
+  const cur=localStorage.getItem("swmt_guest_nick")||"";
+  const n=prompt("Choose a nickname for chat:",cur);
+  if(n==null)return null;
+  const trimmed=n.trim().slice(0,24);
+  if(!trimmed){alert("Nickname cannot be empty.");return null;}
+  localStorage.setItem("swmt_guest_nick",trimmed);
+  renderChat();
+  return trimmed;
+}
+
+function clearGuestNickname(){
+  localStorage.removeItem("swmt_guest_nick");
+  renderChat();
+}
+
+async function initChat(){
+  if(!chatConfigured()){CHAT.error="not-configured";return;}
+  if(!window._fb){await new Promise(r=>window.addEventListener("firebase-ready",r,{once:true}));}
+  try{
+    const app=window._fb.initializeApp(CONFIG.firebase);
+    const db=window._fb.getDatabase(app);
+    CHAT.db=db;
+    CHAT.ref=window._fb.ref(db,"chat/messages");
+    const q=window._fb.query(CHAT.ref,window._fb.limitToLast(200));
+    window._fb.onChildAdded(q,(snap)=>{
+      const m=snap.val();if(!m)return;
+      const id=snap.key;
+      if(CHAT.seenIds.has(id))return;
+      CHAT.seenIds.add(id);
+      CHAT.msgs.push({...m,id});
+      // Track unread when chat tab is not active
+      if(S.view!==4){CHAT.unread++;updateChatBadge();}
+      if(S.view===4)renderChat(true);
+    });
+    CHAT.ready=true;CHAT.error=null;
+    if(S.view===4)renderChat();
+  }catch(e){
+    console.warn("Chat init failed:",e);
+    CHAT.error=e.message||"init-failed";
+    if(S.view===4)renderChat();
+  }
+}
+
+async function sendChatMessage(){
+  const input=document.getElementById("chatInput");
+  if(!input)return;
+  const text=(input.value||"").trim();
+  if(!text)return;
+  if(!CHAT.ready){alert("Chat is not connected yet. Please wait a moment.");return;}
+  let nick=getChatNickname();
+  if(nick.role==="guest"&&!nick.name){
+    const set=setGuestNickname();
+    if(!set)return;
+    nick=getChatNickname();
+  }
+  const msg={
+    author:nick.name,
+    role:nick.role,
+    pid:nick.pid||null,
+    text:text.slice(0,500),
+    time:Date.now()
+  };
+  try{
+    await window._fb.push(CHAT.ref,msg);
+    input.value="";
+  }catch(e){
+    console.warn("Send failed:",e);
+    alert("Failed to send. Check your connection.");
+  }
+}
+
+function chatInputKey(e){
+  if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();sendChatMessage();}
+}
+
+function markChatRead(){
+  if(CHAT.unread>0){CHAT.unread=0;updateChatBadge();}
+}
+
+function updateChatBadge(){
+  const b=document.getElementById("chatUnreadBadge");if(!b)return;
+  if(CHAT.unread>0){b.textContent=CHAT.unread>99?"99+":CHAT.unread;b.style.display="inline-flex";}
+  else b.style.display="none";
+}
+
+function formatChatTime(ts){
+  if(!ts)return"";
+  const d=new Date(ts),now=new Date();
+  const sameDay=d.toDateString()===now.toDateString();
+  const hh=d.getHours().toString().padStart(2,"0"),mm=d.getMinutes().toString().padStart(2,"0");
+  if(sameDay)return hh+":"+mm;
+  return(d.getMonth()+1)+"/"+d.getDate()+" "+hh+":"+mm;
+}
+
+function escapeHtml(s){return String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));}
+
+function renderChat(autoscroll){
+  const v=document.getElementById("v4");if(!v)return;
+  if(!chatConfigured()){
+    v.innerHTML='<div class="chat-wrap"><div class="chat-config-warn"><strong>Chat is not set up yet</strong>Create a free Firebase project and paste the config into <code style="color:var(--gold)">CONFIG.firebase</code> at the top of this file. See setup notes from your developer.</div></div>';
+    return;
+  }
+  const me=getChatNickname();
+  const myKey=me.role==="admin"?"admin:Admin":me.role==="member"?"member:"+me.pid:"guest:"+(me.name||"");
+  const status=CHAT.ready
+    ?'<div class="chat-status"><span class="chat-status-dot connected"></span>Connected · '+CHAT.msgs.length+' msgs</div>'
+    :CHAT.error
+      ?'<div class="chat-status"><span class="chat-status-dot error"></span>Error: '+escapeHtml(CHAT.error)+'</div>'
+      :'<div class="chat-status"><span class="chat-status-dot"></span>Connecting…</div>';
+  let nickBanner="";
+  if(me.role==="guest"){
+    if(me.name){
+      nickBanner='<div class="chat-nick-banner"><span>Chatting as <strong style="color:var(--gold)">'+escapeHtml(me.name)+'</strong> (Guest)</span><button class="btn-sm" onclick="setGuestNickname()">Change</button></div>';
+    }else{
+      nickBanner='<div class="chat-nick-banner"><span>Set a nickname to start chatting</span><button class="btn-sm" onclick="setGuestNickname()">Set Nickname</button></div>';
+    }
+  }
+  let body='';
+  if(!CHAT.msgs.length){
+    body='<div class="chat-empty">No messages yet. Say hello to the family.</div>';
+  }else{
+    const sorted=[...CHAT.msgs].sort((a,b)=>(a.time||0)-(b.time||0));
+    body=sorted.map(m=>{
+      const mKey=m.role==="admin"?"admin:Admin":m.role==="member"?"member:"+m.pid:"guest:"+(m.author||"");
+      const mine=mKey===myKey;
+      const roleClass=m.role==="admin"?"role-admin":m.role==="guest"?"role-guest":"";
+      return'<div class="chat-msg '+(mine?"mine":"theirs")+'">'+
+        avByName(m.author||"?",28)+
+        '<div class="chat-msg-meta">'+
+          '<div class="chat-msg-author '+roleClass+'">'+escapeHtml(m.author||"?")+(m.role==="admin"?' <span class="role-badge admin" style="font-size:8px;padding:1px 5px">The Don</span>':m.role==="guest"?' <span class="role-badge guest" style="font-size:8px;padding:1px 5px">Guest</span>':'')+'</div>'+
+          '<div class="chat-msg-bubble">'+escapeHtml(m.text||"")+'</div>'+
+          '<div class="chat-msg-time">'+formatChatTime(m.time)+'</div>'+
+        '</div>'+
+      '</div>';
+    }).join("");
+  }
+  const canType=me.role!=="guest"||!!me.name;
+  const inputArea='<div class="chat-input-row"><input id="chatInput" type="text" placeholder="'+(canType?"Type a message…":"Set a nickname first")+'" maxlength="500" '+(canType&&CHAT.ready?'':'disabled')+' onkeydown="chatInputKey(event)"><button onclick="sendChatMessage()" '+(canType&&CHAT.ready?'':'disabled')+'>Send</button></div>';
+  v.innerHTML='<div class="chat-wrap">'+status+nickBanner+'<div class="chat-msg-list" id="chatMsgList">'+body+'</div>'+inputArea+'</div>';
+  // Scroll to bottom
+  const list=document.getElementById("chatMsgList");
+  if(list)list.scrollTop=list.scrollHeight;
+}
+
+// ── MOMENTS (Firebase Realtime DB + Storage) ──
+
+function momentsConfigured(){return !!(CONFIG.firebase&&CONFIG.firebase.databaseURL&&CONFIG.firebase.storageBucket);}
+
+function getMomentsSeenIds(){
+  if(!MOMENTS._seenIds){
+    try{MOMENTS._seenIds=new Set(JSON.parse(localStorage.getItem("swmt_moments_seen")||"[]"));}
+    catch(e){MOMENTS._seenIds=new Set();}
+  }
+  return MOMENTS._seenIds;
+}
+function saveMomentsSeenIds(){
+  if(MOMENTS._seenIds)localStorage.setItem("swmt_moments_seen",JSON.stringify([...MOMENTS._seenIds]));
+}
+
+function getMomentAuthorKey(){
+  const sess=getSession();
+  if(sess&&sess.role==="admin")return"admin:Admin";
+  if(sess&&sess.role==="member")return"member:"+sess.pid;
+  const nick=localStorage.getItem("swmt_guest_nick")||"Guest";
+  return"guest:"+nick.replace(/[.#$[\]/]/g,"_");
+}
+function getMomentAuthorName(){
+  const sess=getSession();
+  if(!sess)return localStorage.getItem("swmt_guest_nick")||"Guest";
+  if(sess.role==="admin")return"The Don";
+  const p=S.players.find(x=>x.id===sess.pid);
+  return p?(p.firstName+" "+p.lastName):"Member";
+}
+function getMomentAuthorRole(){const sess=getSession();return sess?sess.role:"guest";}
+
+async function initMoments(){
+  if(!momentsConfigured()){MOMENTS.error="not-configured";return;}
+  if(MOMENTS._app)return;
+  if(!window._fb){await new Promise(r=>window.addEventListener("firebase-ready",r,{once:true}));}
+  try{
+    const app=window._fb.initializeApp(CONFIG.firebase,"moments");
+    MOMENTS._app=app;
+    MOMENTS.db=window._fb.getDatabase(app);
+    MOMENTS._storage=window._fb.getStorage(app);
+    const seen=getMomentsSeenIds();
+    window._fb.onChildAdded(window._fb.dbRef(MOMENTS.db,"swmt_moments"),snap=>{
+      const m={...snap.val(),id:snap.key};
+      if(!MOMENTS.items.find(x=>x.id===m.id))MOMENTS.items.push(m);
+      MOMENTS.items.sort((a,b)=>(b.ts||0)-(a.ts||0));
+      if(!seen.has(m.id)&&S.view!==5){MOMENTS.unread++;updateMomentsBadge();}
+      if(S.view===5)renderMoments();
+    });
+    window._fb.onChildChanged(window._fb.dbRef(MOMENTS.db,"swmt_moments"),snap=>{
+      const idx=MOMENTS.items.findIndex(x=>x.id===snap.key);
+      if(idx>=0){MOMENTS.items[idx]={...snap.val(),id:snap.key};}
+      if(S.view===5){renderMoments();const open=document.querySelector(".moment-detail-modal");if(open){const m=MOMENTS.items.find(x=>x.id===snap.key);if(m)_renderMomentDetail(m);}}
+    });
+    window._fb.onChildRemoved(window._fb.dbRef(MOMENTS.db,"swmt_moments"),snap=>{
+      MOMENTS.items=MOMENTS.items.filter(x=>x.id!==snap.key);
+      if(S.view===5)renderMoments();
+    });
+    MOMENTS.ready=true;MOMENTS.error=null;
+    if(S.view===5)renderMoments();
+  }catch(e){
+    console.warn("Moments init failed:",e);
+    MOMENTS.error=e.message||"init-failed";
+    if(S.view===5)renderMoments();
+  }
+}
+
+function markMomentsRead(){
+  const seen=getMomentsSeenIds();
+  MOMENTS.items.forEach(m=>seen.add(m.id));
+  saveMomentsSeenIds();
+  MOMENTS.unread=0;
+  updateMomentsBadge();
+}
+
+function updateMomentsBadge(){
+  const b=document.getElementById("momentsUnreadBadge");if(!b)return;
+  if(MOMENTS.unread>0){b.textContent=MOMENTS.unread>99?"99+":MOMENTS.unread;b.style.display="inline-flex";}
+  else b.style.display="none";
+}
+
+function docIcon(name){
+  const ext=(name||"").split(".").pop().toLowerCase();
+  if(ext==="pdf")return'<span style="font-size:28px">📄</span>';
+  if(ext==="doc"||ext==="docx")return'<span style="font-size:28px">📝</span>';
+  if(ext==="xls"||ext==="xlsx")return'<span style="font-size:28px">📊</span>';
+  if(ext==="ppt"||ext==="pptx")return'<span style="font-size:28px">📑</span>';
+  if(["mp4","mov","avi","webm"].includes(ext))return'<span style="font-size:28px">🎬</span>';
+  if(["jpg","jpeg","png","gif","webp","heic"].includes(ext))return'<span style="font-size:28px">🖼️</span>';
+  return'<span style="font-size:28px">📎</span>';
+}
+function fmtFileSize(bytes){
+  if(!bytes)return"";
+  if(bytes<1024)return bytes+"B";
+  if(bytes<1048576)return(bytes/1024).toFixed(1)+"KB";
+  return(bytes/1048576).toFixed(1)+"MB";
+}
+
+function renderMoments(){
+  const v=document.getElementById("v5");if(!v)return;
+  const sess=getSession();
+  const canPost=sess&&(sess.role==="member"||sess.role==="admin");
+  const seen=getMomentsSeenIds();
+  if(!momentsConfigured()){
+    v.innerHTML='<div class="moment-empty"><strong style="color:var(--gold);display:block;margin-bottom:6px">Moments not configured</strong>Enable Firebase Storage in the Firebase console to use this feature.</div>';
+    return;
+  }
+  const addBtn=canPost
+    ?'<button class="btn btn-gold" onclick="showAddMomentModal()">+ Upload</button>'
+    :'<span style="font-size:11px;color:var(--text-muted)">Log in to upload</span>';
+  const toolbar='<div class="moments-toolbar"><span style="font-size:12px;color:var(--text-muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em">'+MOMENTS.items.length+' Moments</span>'+addBtn+'</div>';
+  if(!MOMENTS.items.length){
+    const msg=MOMENTS.error
+      ?'<div class="moment-empty">Connection error: '+escapeHtml(MOMENTS.error)+'</div>'
+      :MOMENTS.ready
+        ?'<div class="moment-empty">No moments yet.<br><span style="font-size:12px">Be the first to share a photo, video, or document.</span></div>'
+        :'<div class="moment-empty">Connecting…</div>';
+    v.innerHTML=toolbar+msg;return;
+  }
+  const cards=MOMENTS.items.map(m=>{
+    const likeCount=Object.keys(m.likes||{}).length;
+    const commentCount=Object.keys(m.comments||{}).length;
+    const viewCount=Object.keys(m.seenBy||{}).length;
+    const isNew=!seen.has(m.id);
+    let thumb="";
+    if(m.type==="image"){
+      thumb='<img class="moment-thumb" src="'+escapeHtml(m.url||"")+'" loading="lazy" onerror="this.style.opacity=.3">';
+    }else if(m.type==="video"){
+      thumb='<div class="moment-thumb-doc" style="background:#0A0A0A">'+docIcon(m.fileName||"")+
+        '<span class="moment-thumb-doc-name">'+escapeHtml(m.fileName||"Video")+'</span></div>';
+    }else{
+      thumb='<div class="moment-thumb-doc">'+docIcon(m.fileName||"")+
+        '<span class="moment-thumb-doc-name">'+escapeHtml(m.fileName||"File")+'</span></div>';
+    }
+    const videoBadge=m.type==="video"?'<div class="moment-video-badge">VIDEO</div>':"";
+    const newBadge=isNew?'<div class="moment-new-badge">NEW</div>':"";
+    const overlay='<div class="moment-overlay"><span class="moment-stat">❤️ '+likeCount+'</span><span class="moment-stat">💬 '+commentCount+'</span><span class="moment-stat">👁 '+viewCount+'</span></div>';
+    return'<div class="moment-card" onclick="openMoment(\''+m.id+'\')">'+thumb+videoBadge+newBadge+overlay+'</div>';
+  }).join("");
+  v.innerHTML=toolbar+'<div class="moments-grid">'+cards+'</div>';
+}
+
+// ── ADD MOMENT MODAL ──
+let _momentFile=null;
+function showAddMomentModal(){
+  const sess=getSession();
+  if(!sess||sess.role==="guest"){alert("Please log in to upload moments.");return;}
+  _momentFile=null;
+  document.getElementById("modalArea").innerHTML=
+    '<div class="modal-overlay" onclick="if(event.target===this)closeMomentModal()">'+
+    '<div class="modal moment-detail-modal">'+
+      '<h2>Upload Moment</h2>'+
+      '<div id="momentPreviewWrap"></div>'+
+      '<div class="moment-upload-area" id="momentDropZone" onclick="document.getElementById(\'momentFileInput\').click()" ondrop="momentFileDrop(event)" ondragover="event.preventDefault();this.classList.add(\'drag\')" ondragleave="this.classList.remove(\'drag\')">'+
+        '<div style="font-size:28px;margin-bottom:6px">📎</div>'+
+        '<div>Tap to choose photo, video or document</div>'+
+        '<div style="font-size:11px;margin-top:4px;color:var(--text-muted)">JPG · PNG · MP4 · PDF · DOC · XLS</div>'+
+      '</div>'+
+      '<input type="file" id="momentFileInput" accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt" style="display:none" onchange="momentFileChosen(this.files[0])">'+
+      '<div class="fg" style="margin-top:10px"><label>Caption (optional)</label><textarea id="momentCaption" placeholder="Say something about this moment…" style="min-height:60px"></textarea></div>'+
+      '<div class="row-btns"><button class="btn" onclick="closeMomentModal()">Cancel</button><button class="btn btn-gold" id="momentSubmitBtn" onclick="submitMoment()" disabled>Upload</button></div>'+
+    '</div></div>';
+}
+function closeMomentModal(){document.getElementById("modalArea").innerHTML="";}
+
+function momentFileDrop(e){
+  e.preventDefault();
+  document.getElementById("momentDropZone").classList.remove("drag");
+  const f=e.dataTransfer&&e.dataTransfer.files[0];
+  if(f)momentFileChosen(f);
+}
+function momentFileChosen(file){
+  if(!file)return;
+  _momentFile=file;
+  const wrap=document.getElementById("momentPreviewWrap");
+  let preview="";
+  if(file.type.startsWith("image/")){
+    const url=URL.createObjectURL(file);
+    preview='<div class="moment-preview-wrap"><img class="moment-preview-img" src="'+url+'"><button class="moment-preview-remove" onclick="clearMomentFile()">✕</button></div>';
+  }else if(file.type.startsWith("video/")){
+    const url=URL.createObjectURL(file);
+    preview='<div class="moment-preview-wrap"><video class="moment-preview-img" src="'+url+'" controls style="background:#000"></video><button class="moment-preview-remove" onclick="clearMomentFile()">✕</button></div>';
+  }else{
+    preview='<div class="moment-preview-wrap" style="display:flex;align-items:center;gap:10px;padding:12px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:var(--radius)">'+
+      docIcon(file.name)+'<div><div style="font-size:13px;font-weight:600;color:var(--text-primary)">'+escapeHtml(file.name)+'</div><div style="font-size:11px;color:var(--text-muted)">'+fmtFileSize(file.size)+'</div></div>'+
+      '<button class="moment-preview-remove" style="position:static;margin-left:auto" onclick="clearMomentFile()">✕</button></div>';
+  }
+  if(wrap)wrap.innerHTML=preview;
+  const dz=document.getElementById("momentDropZone");if(dz)dz.style.display="none";
+  const btn=document.getElementById("momentSubmitBtn");if(btn)btn.disabled=false;
+}
+function clearMomentFile(){
+  _momentFile=null;
+  const wrap=document.getElementById("momentPreviewWrap");if(wrap)wrap.innerHTML="";
+  const dz=document.getElementById("momentDropZone");if(dz)dz.style.display="";
+  const fi=document.getElementById("momentFileInput");if(fi)fi.value="";
+  const btn=document.getElementById("momentSubmitBtn");if(btn)btn.disabled=true;
+}
+
+async function compressImage(file,maxPx,quality){
+  return new Promise(resolve=>{
+    const img=new Image(),url=URL.createObjectURL(file);
+    img.onload=()=>{
+      URL.revokeObjectURL(url);
+      let{width:w,height:h}=img;
+      if(w>maxPx||h>maxPx){const s=maxPx/Math.max(w,h);w=Math.round(w*s);h=Math.round(h*s);}
+      const c=document.createElement("canvas");c.width=w;c.height=h;
+      c.getContext("2d").drawImage(img,0,0,w,h);
+      c.toBlob(blob=>resolve(blob||file),"image/jpeg",quality);
+    };
+    img.onerror=()=>resolve(file);
+    img.src=url;
+  });
+}
+
+async function submitMoment(){
+  if(!_momentFile){alert("Please choose a file first.");return;}
+  if(!MOMENTS.db||!MOMENTS._storage){alert("Moments is not connected yet. Please wait a moment.");return;}
+  const btn=document.getElementById("momentSubmitBtn");
+  if(btn){btn.disabled=true;btn.textContent="Uploading…";}
+  try{
+    const fb=window._fb;
+    const sess=getSession();if(!sess)throw new Error("Not logged in");
+    const ts=Date.now();
+    const safeName=_momentFile.name.replace(/[^a-zA-Z0-9._-]/g,"_");
+    const storagePath="swmt_moments/"+ts+"_"+safeName;
+    let uploadFile=_momentFile;
+    if(_momentFile.type.startsWith("image/")){
+      const compressed=await compressImage(_momentFile,1400,0.82);
+      if(compressed)uploadFile=compressed;
+    }
+    const snap=await fb.uploadBytes(fb.stRef(MOMENTS._storage,storagePath),uploadFile);
+    const url=await fb.getDownloadURL(snap.ref);
+    const type=_momentFile.type.startsWith("image/")?"image":_momentFile.type.startsWith("video/")?"video":"document";
+    const caption=(document.getElementById("momentCaption")||{}).value||"";
+    const newRef=fb.push(fb.dbRef(MOMENTS.db,"swmt_moments"));
+    await fb.set(newRef,{
+      authorKey:getMomentAuthorKey(),authorName:getMomentAuthorName(),authorRole:getMomentAuthorRole(),
+      caption:caption.trim(),type,url,
+      fileName:_momentFile.name,fileSize:uploadFile.size||_momentFile.size,
+      storagePath,ts,likes:{},seenBy:{},comments:{}
+    });
+    closeMomentModal();
+  }catch(e){
+    console.error("Upload failed:",e);
+    alert("Upload failed: "+(e.message||"Unknown error"));
+    if(btn){btn.disabled=false;btn.textContent="Upload";}
+  }
+}
+
+// ── MOMENT DETAIL ──
+function openMoment(id){
+  const m=MOMENTS.items.find(x=>x.id===id);if(!m)return;
+  const seen=getMomentsSeenIds();seen.add(id);saveMomentsSeenIds();
+  const myKey=getMomentAuthorKey();
+  if(MOMENTS.db&&!(m.seenBy||{})[myKey]){
+    const upd={};upd["seenBy/"+myKey]=true;
+    window._fb.update(window._fb.dbRef(MOMENTS.db,"swmt_moments/"+id),upd).catch(()=>{});
+  }
+  _renderMomentDetail(m);
+}
+
+function _renderMomentDetail(m){
+  const sess=getSession();
+  const myKey=getMomentAuthorKey();
+  const likeCount=Object.keys(m.likes||{}).length;
+  const isLiked=!!(m.likes||{})[myKey];
+  const viewCount=Object.keys(m.seenBy||{}).length;
+  const canDelete=sess&&(sess.role==="admin"||(m.authorKey===myKey));
+  // Media
+  let media="";
+  if(m.type==="image"){
+    media='<img class="moment-detail-img" src="'+escapeHtml(m.url||"")+'" onclick="window.open(this.src,\'_blank\')">';
+  }else if(m.type==="video"){
+    media='<video class="moment-detail-video" src="'+escapeHtml(m.url||"")+'" controls playsinline></video>';
+  }else{
+    media='<a class="moment-detail-doc" href="'+escapeHtml(m.url||"")+'" target="_blank" rel="noopener">'+docIcon(m.fileName||"")+
+      '<div><div class="moment-detail-doc-name">'+escapeHtml(m.fileName||"Document")+'</div>'+
+      '<div class="moment-detail-doc-size">'+fmtFileSize(m.fileSize)+' · Tap to open</div></div></a>';
+  }
+  const caption=m.caption?'<div class="moment-detail-caption">'+escapeHtml(m.caption)+'</div>':"";
+  const dateFmt=m.ts?new Date(m.ts).toLocaleDateString("en-US",{month:"short",day:"numeric",year:"numeric"}):"";
+  const meta='<div class="moment-detail-meta"><span class="moment-detail-author">'+escapeHtml(m.authorName||"")+'</span><span class="moment-detail-date">'+dateFmt+'</span><span style="font-size:11px;color:var(--text-muted)">👁 '+viewCount+'</span></div>';
+  const likeBtn='<button class="moment-action-btn'+(isLiked?" liked":"")+'" onclick="likeMoment(\''+m.id+'\')">❤️ '+likeCount+'</button>';
+  const delBtn=canDelete?'<button class="moment-action-btn" onclick="deleteMoment(\''+m.id+'\')" style="color:var(--red);border-color:var(--red)">🗑 Delete</button>':"";
+  const actions='<div class="moment-detail-actions">'+likeBtn+delBtn+'</div>';
+  // Comments
+  const comments=Object.entries(m.comments||{}).sort((a,b)=>(a[1].ts||0)-(b[1].ts||0));
+  const commentItems=comments.map(([cid,c])=>{
+    const canDelC=sess&&(sess.role==="admin"||getMomentAuthorKey()===c.authorKey);
+    const delC=canDelC?'<button class="moment-comment-del" onclick="deleteMomentComment(\''+m.id+'\',\''+cid+'\')" title="Delete">✕</button>':"";
+    const roleTag=c.authorRole==="admin"?' <span class="role-badge admin" style="font-size:8px;padding:1px 4px">The Don</span>':c.authorRole==="guest"?' <span class="role-badge guest" style="font-size:8px;padding:1px 4px">Guest</span>':"";
+    return'<div class="moment-comment">'+
+      '<div class="moment-comment-body">'+
+        '<div class="moment-comment-author">'+escapeHtml(c.authorName||"?")+roleTag+'</div>'+
+        '<div class="moment-comment-text">'+escapeHtml(c.text||"")+'</div>'+
+        '<div class="moment-comment-time">'+formatChatTime(c.ts)+'</div>'+
+      '</div>'+delC+
+    '</div>';
+  }).join("");
+  const canComment=!!(sess||localStorage.getItem("swmt_guest_nick"));
+  const commentInput=canComment
+    ?'<div class="moment-comment-input"><input id="momentCommentInput" type="text" placeholder="Add a comment…" maxlength="300" onkeydown="if(event.key===\'Enter\')submitMomentComment(\''+m.id+'\')"><button onclick="submitMomentComment(\''+m.id+'\')">Post</button></div>'
+    :'<div style="font-size:12px;color:var(--text-muted);margin-top:8px">Log in to comment.</div>';
+  const commentSection='<div class="moment-comments">'+
+    '<div class="moment-comments-head">Comments ('+comments.length+')</div>'+
+    (commentItems||'<div style="font-size:12px;color:var(--text-muted);font-style:italic;margin-bottom:10px">No comments yet.</div>')+
+    commentInput+'</div>';
+  document.getElementById("modalArea").innerHTML=
+    '<div class="modal-overlay" onclick="if(event.target===this)closeMomentDetail()">'+
+    '<div class="modal moment-detail-modal">'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'+
+        '<h2 style="margin:0">Moment</h2><button class="btn-sm" onclick="closeMomentDetail()">✕ Close</button>'+
+      '</div>'+
+      media+caption+meta+actions+commentSection+
+    '</div></div>';
+}
+
+function closeMomentDetail(){document.getElementById("modalArea").innerHTML="";}
+
+async function likeMoment(id){
+  if(!MOMENTS.db)return;
+  const m=MOMENTS.items.find(x=>x.id===id);if(!m)return;
+  const myKey=getMomentAuthorKey();
+  const already=!!(m.likes||{})[myKey];
+  const upd={};upd["likes/"+myKey]=already?null:true;
+  await window._fb.update(window._fb.dbRef(MOMENTS.db,"swmt_moments/"+id),upd).catch(()=>{});
+}
+
+async function submitMomentComment(id){
+  if(!MOMENTS.db)return;
+  const input=document.getElementById("momentCommentInput");if(!input)return;
+  const text=(input.value||"").trim();if(!text)return;
+  const role=getMomentAuthorRole();
+  if(role==="guest"&&!localStorage.getItem("swmt_guest_nick")){alert("Set a guest nickname to comment.");return;}
+  input.value="";
+  const cRef=window._fb.push(window._fb.dbRef(MOMENTS.db,"swmt_moments/"+id+"/comments"));
+  await window._fb.set(cRef,{authorKey:getMomentAuthorKey(),authorName:getMomentAuthorName(),authorRole:role,text,ts:Date.now()}).catch(()=>{});
+}
+
+async function deleteMomentComment(id,cid){
+  if(!confirm("Delete this comment?"))return;
+  if(!MOMENTS.db)return;
+  await window._fb.remove(window._fb.dbRef(MOMENTS.db,"swmt_moments/"+id+"/comments/"+cid)).catch(()=>{});
+}
+
+async function deleteMoment(id){
+  if(!confirm("Delete this moment? This cannot be undone."))return;
+  if(!MOMENTS.db)return;
+  const m=MOMENTS.items.find(x=>x.id===id);
+  closeMomentDetail();
+  await window._fb.remove(window._fb.dbRef(MOMENTS.db,"swmt_moments/"+id)).catch(()=>{});
+  if(m&&m.storagePath&&MOMENTS._storage){
+    window._fb.deleteObject(window._fb.stRef(MOMENTS._storage,m.storagePath)).catch(()=>{});
+  }
+}
 
 // ── GOOGLE SHEETS SYNC ──
 async function syncToSheet(){
@@ -898,16 +1740,8 @@ async function loadFromSheet(){
     const r=await fetch(CONFIG.appsScriptUrl+"?action=load");
     if(!r.ok)return;
     const d=await r.json();
-    if(d&&d.players){Object.assign(S,d);fixAll();renderAll();updateUnreadBadge();}
+    if(d&&d.players){Object.assign(S,d);fixAll();renderAll();updateScheduleBadge();}
   }catch(e){console.warn("Sheet load failed",e);}
-}
-
-// ── SEND NOTIFICATIONS (email + SMS + push via Apps Script) ──
-async function notifyAll(post){
-  if(!CONFIG.appsScriptUrl)return;
-  try{
-    await fetch(CONFIG.appsScriptUrl,{method:"POST",body:JSON.stringify({action:"notify",post,players:S.players}),headers:{"Content-Type":"text/plain"}});
-  }catch(e){console.warn("Notify failed",e);}
 }
 
 // ── APP BADGE API ──
@@ -959,6 +1793,12 @@ if(CONFIG.oneSignalAppId){
 
 // Load latest data from sheet in background
 loadFromSheet();
+
+// Initialize group chat (Firebase)
+initChat();
+
+// Initialize moments (Firebase)
+initMoments();
 </script>
 </body>
 </html>
