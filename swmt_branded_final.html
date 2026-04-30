@@ -112,7 +112,9 @@ small{color:var(--text-secondary)}
 .stat-sub.link{color:#8B6914;font-weight:600}
 
 /* ── VIEW TABS — modern segmented pill ── */
-.view-tabs{display:flex;gap:2px;margin-bottom:1.5rem;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:4px;background:#0d2b18;border:1px solid #1e5233;border-radius:var(--radius-lg);box-shadow:var(--shadow-inset);scrollbar-width:none}
+.view-tabs-outer{position:relative;margin-bottom:1.5rem}
+.view-tabs-outer::after{content:'';position:absolute;right:0;top:0;bottom:0;width:36px;background:linear-gradient(to right,transparent,#0d2b18 90%);border-radius:0 var(--radius-lg) var(--radius-lg) 0;pointer-events:none}
+.view-tabs{display:flex;gap:2px;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:4px;background:#0d2b18;border:1px solid #1e5233;border-radius:var(--radius-lg);box-shadow:var(--shadow-inset);scrollbar-width:none}
 .view-tabs::-webkit-scrollbar{display:none}
 .vtab{padding:8px 14px;font-size:11px;font-weight:600;border:none;border-radius:8px;background:transparent;color:var(--text-muted);cursor:pointer;letter-spacing:.06em;text-transform:uppercase;transition:color .15s var(--ease),background .15s var(--ease);font-family:inherit;display:inline-flex;align-items:center;gap:5px;line-height:1.2;white-space:nowrap}
 .vtab:hover{color:var(--text-primary);background:var(--bg-hover)}
@@ -588,6 +590,7 @@ small{color:var(--text-secondary)}
 
   <div class="app">
     <div class="stat-grid" id="statGrid"></div>
+    <div class="view-tabs-outer">
     <div class="view-tabs">
       <button class="vtab active" id="vtab0" onclick="setView(0,this)">Standings</button>
       <button class="vtab" id="vtab1" onclick="setView(1,this)">Game Scores</button>
@@ -597,6 +600,7 @@ small{color:var(--text-secondary)}
       <button class="vtab" id="vtab6" onclick="setView(6,this)">Announcements <span class="unread-badge" id="annUnreadBadge" style="display:none">0</span></button>
       <button class="vtab" id="vtab2" onclick="setView(2,this)">Points Table</button>
       <button class="vtab" id="vtab7" onclick="setView(7,this)">News</button>
+    </div>
     </div>
     <div id="v0"></div>
     <div id="v1" style="display:none"></div>
@@ -1524,9 +1528,20 @@ function previewPhoto(input){
   if(!input.files||!input.files[0])return;
   const reader=new FileReader();
   reader.onload=e=>{
-    const prev=document.getElementById("mPhotoPreview");
-    if(prev){prev.outerHTML='<img id="mPhotoPreview" src="'+e.target.result+'" style="width:80px;height:80px;object-fit:cover;border-radius:50%;display:block">';}
-    window._pendingPhoto=e.target.result;
+    const img=new Image();
+    img.onload=()=>{
+      const canvas=document.createElement('canvas');
+      const size=96;canvas.width=size;canvas.height=size;
+      const ctx=canvas.getContext('2d');
+      const scale=size/Math.min(img.width,img.height);
+      const dx=-(img.width*scale-size)/2,dy=-(img.height*scale-size)/2;
+      ctx.drawImage(img,dx,dy,img.width*scale,img.height*scale);
+      const compressed=canvas.toDataURL('image/jpeg',0.75);
+      window._pendingPhoto=compressed;
+      const prev=document.getElementById("mPhotoPreview");
+      if(prev){prev.outerHTML='<img id="mPhotoPreview" src="'+compressed+'" style="width:80px;height:80px;object-fit:cover;border-radius:50%;display:block">';}
+    };
+    img.src=e.target.result;
   };
   reader.readAsDataURL(input.files[0]);
 }
@@ -3077,17 +3092,26 @@ async function deleteAnn(id){
 async function syncToSheet(){
   if(!CONFIG.appsScriptUrl)return;
   try{
-    await fetch(CONFIG.appsScriptUrl,{method:"POST",body:JSON.stringify({action:"save",data:S}),headers:{"Content-Type":"text/plain"}});
+    const payload=JSON.parse(JSON.stringify(S));
+    payload.players=payload.players.map(p=>{const q={...p};delete q.photo;return q;});
+    await fetch(CONFIG.appsScriptUrl,{method:"POST",body:JSON.stringify({action:"save",data:payload}),headers:{"Content-Type":"text/plain"}});
   }catch(e){console.warn("Sheet sync failed",e);}
 }
 
 async function loadFromSheet(){
   if(!CONFIG.appsScriptUrl)return;
+  if(document.getElementById("modalArea")&&document.getElementById("modalArea").innerHTML.trim())return;
   try{
     const r=await fetch(CONFIG.appsScriptUrl+"?action=load");
     if(!r.ok)return;
     const d=await r.json();
-    if(d&&d.players){Object.assign(S,d);fixAll();renderAll();updateScheduleBadge();}
+    if(d&&d.players){
+      const photos={};S.players.forEach(p=>{if(p.photo)photos[p.id]=p.photo;});
+      Object.assign(S,d);
+      S.players.forEach(p=>{if(photos[p.id])p.photo=photos[p.id];});
+      const seen=new Set();S.players=S.players.filter(p=>{if(seen.has(p.id))return false;seen.add(p.id);return true;});
+      fixAll();renderAll();updateScheduleBadge();
+    }
   }catch(e){console.warn("Sheet load failed",e);}
 }
 
