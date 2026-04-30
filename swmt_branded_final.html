@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Shoe Wedge Mafia Tour</title>
 <meta name="theme-color" content="#0D0D0D">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -72,10 +72,10 @@ strong,b{font-weight:700;color:var(--text-primary)}
 small{color:var(--text-secondary)}
 .page{display:none}.page.active{display:block;animation:pageFade .25s var(--ease)}
 @keyframes pageFade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
-.app{padding:1.25rem 1rem 3rem;max-width:920px;margin:0 auto}
+.app{padding:1.25rem 1rem calc(3rem + env(safe-area-inset-bottom,0px));max-width:920px;margin:0 auto}
 
 /* ── TOPBAR ── */
-.topbar{background:rgba(16,22,31,.85);backdrop-filter:saturate(140%) blur(18px);-webkit-backdrop-filter:saturate(140%) blur(18px);border-bottom:1px solid var(--border);padding:0 1.25rem;display:flex;align-items:center;justify-content:space-between;height:64px;position:sticky;top:0;z-index:100}
+.topbar{background:rgba(16,22,31,.85);backdrop-filter:saturate(140%) blur(18px);-webkit-backdrop-filter:saturate(140%) blur(18px);border-bottom:1px solid var(--border);padding:env(safe-area-inset-top,0px) 1.25rem 0;display:flex;align-items:center;justify-content:space-between;height:calc(64px + env(safe-area-inset-top,0px));position:sticky;top:0;z-index:100}
 .topbar-brand{display:flex;align-items:center;gap:12px}
 .topbar-logo{height:42px;width:42px;object-fit:contain;filter:invert(1);mix-blend-mode:screen;opacity:.95}
 .topbar-title{display:flex;flex-direction:column;gap:2px}
@@ -385,7 +385,7 @@ small{color:var(--text-secondary)}
 .pin-key:active{transform:scale(.93);background:var(--gold-bg);border-color:var(--gold)}
 @keyframes pinShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
 /* ── CHAT ── */
-.chat-wrap{display:flex;flex-direction:column;height:calc(100vh - 280px);min-height:400px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden}
+.chat-wrap{display:flex;flex-direction:column;height:calc(100vh - 280px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));min-height:400px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden}
 .chat-status{padding:8px 12px;font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;background:var(--bg-secondary);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px}
 .chat-status-dot{width:6px;height:6px;border-radius:50%;background:var(--text-muted)}
 .chat-status-dot.connected{background:var(--green-light);animation:pulse 2s infinite}
@@ -638,7 +638,7 @@ small{color:var(--text-secondary)}
 
 <!-- Global modal + FAB — outside all .page divs so they stay visible on any page -->
 <div id="modalArea"></div>
-<div id="adminButtons" style="position:fixed;bottom:1.5rem;right:1rem;display:none;flex-direction:column;gap:8px;z-index:90">
+<div id="adminButtons" style="position:fixed;bottom:calc(1.5rem + env(safe-area-inset-bottom,0px));right:1rem;display:none;flex-direction:column;gap:8px;z-index:90">
   <button class="btn btn-gold" onclick="showModal('addGame')" title="Add game">+ Game</button>
   <button class="btn" onclick="showModal('addPlayer')" title="Add player">+ Player</button>
   <button class="btn" onclick="showModal('settings')" title="Settings">⚙</button>
