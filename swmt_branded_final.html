@@ -112,7 +112,8 @@ small{color:var(--text-secondary)}
 .stat-sub.link{color:#8B6914;font-weight:600}
 
 /* ── VIEW TABS — modern segmented pill ── */
-.view-tabs{display:flex;gap:2px;margin-bottom:1.5rem;flex-wrap:wrap;padding:4px;background:#0d2b18;border:1px solid #1e5233;border-radius:var(--radius-lg);box-shadow:var(--shadow-inset)}
+.view-tabs{display:flex;gap:2px;margin-bottom:1.5rem;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:4px;background:#0d2b18;border:1px solid #1e5233;border-radius:var(--radius-lg);box-shadow:var(--shadow-inset);scrollbar-width:none}
+.view-tabs::-webkit-scrollbar{display:none}
 .vtab{padding:8px 14px;font-size:11px;font-weight:600;border:none;border-radius:8px;background:transparent;color:var(--text-muted);cursor:pointer;letter-spacing:.06em;text-transform:uppercase;transition:color .15s var(--ease),background .15s var(--ease);font-family:inherit;display:inline-flex;align-items:center;gap:5px;line-height:1.2;white-space:nowrap}
 .vtab:hover{color:var(--text-primary);background:var(--bg-hover)}
 .vtab.active{color:var(--gold-light);background:var(--gold-bg-strong);box-shadow:var(--shadow-inset),0 1px 0 rgba(212,185,118,.15)}
@@ -847,7 +848,7 @@ function getStats(pid){
   return{total,wins,top3,played,birdies,eagles};
 }
 function getStandings(){return S.players.map(p=>({...p,...getStats(p.id)})).sort((a,b)=>b.total-a.total);}
-function av(p,size){size=size||28;const[bg,tc]=COLORS[p.id%COLORS.length];return'<div class="avatar" style="width:'+size+'px;height:'+size+'px;background:'+bg+';color:'+tc+';font-size:'+(size<36?10:Math.floor(size/3.2))+'px;border:1px solid '+tc+'40">'+(p.firstName[0]||"")+(p.lastName[0]||"")+'</div>';}
+function av(p,size){size=size||28;if(p.photo)return'<div class="avatar" style="width:'+size+'px;height:'+size+'px;border-radius:50%;overflow:hidden;flex-shrink:0"><img src="'+p.photo+'" style="width:100%;height:100%;object-fit:cover;display:block"></div>';const[bg,tc]=COLORS[p.id%COLORS.length];return'<div class="avatar" style="width:'+size+'px;height:'+size+'px;background:'+bg+';color:'+tc+';font-size:'+(size<36?10:Math.floor(size/3.2))+'px;border:1px solid '+tc+'40">'+(p.firstName[0]||"")+(p.lastName[0]||"")+'</div>';}
 function avByName(name,size){size=size||22;const p=S.players.find(x=>(x.firstName+" "+x.lastName)===name);if(p)return av(p,size);return'<div class="avatar" style="width:'+size+'px;height:'+size+'px;background:#1A1A18;color:#888;font-size:10px;border:1px solid #333">'+name.slice(0,2)+'</div>';}
 function ptsClass(v){return v>=300?"pts-high":v>=100?"pts-mid":"pts-low";}
 function hcpTag(p){return'<span class="hcp-tag">'+(p.handicap!=null?p.handicap:"—")+'</span>';}
@@ -1462,8 +1463,10 @@ function showModal(type,data){
     const hv=p.handicap!=null?p.handicap:"";
     const phoneVal=p.phone||(canOverride?"+1 ":"+1 ");
     const removeBtn=can("admin")?'<button class="btn btn-red" onclick="removePlayer()">Remove</button>':'';
+    const photoPreview=p.photo?'<img id="mPhotoPreview" src="'+p.photo+'" style="width:80px;height:80px;object-fit:cover;border-radius:50%;display:block">':'<div id="mPhotoPreview" style="width:80px;height:80px;border-radius:50%;background:var(--bg-secondary);border:2px dashed var(--border-strong);display:flex;align-items:center;justify-content:center;font-size:24px">📷</div>';
     area.innerHTML=wrap(
       '<h2>Edit Profile</h2>'+
+      '<div class="fg"><label>Profile Photo</label><div style="display:flex;align-items:center;gap:14px">'+photoPreview+'<div><input id="mPhotoInput" type="file" accept="image/*" style="display:none" onchange="previewPhoto(this)"><button class="btn" type="button" onclick="document.getElementById(\'mPhotoInput\').click()">Choose Photo</button>'+(p.photo?'<button class="btn btn-red" type="button" style="margin-top:6px" onclick="removePhoto()">Remove</button>':'')+'</div></div></div>'+
       '<div class="fg"><label>First name</label><input id="mFn" type="text" value="'+escapeHtml(p.firstName)+'"></div>'+
       '<div class="fg"><label>Last name</label><input id="mLn" type="text" value="'+escapeHtml(p.lastName)+'"></div>'+
       '<div class="fg"><label>Phone <span style="color:var(--red)">*</span> <span style="font-size:10px;color:var(--text-muted)">e.g. +16041234567</span></label>'+
@@ -1517,6 +1520,21 @@ function showModal(type,data){
 function closeModal(){document.getElementById("modalArea").innerHTML="";}
 function reqAdmin(){closeModal();setTimeout(()=>showModal("adminPin"),50);}
 function confirmAdd(){const fn=(document.getElementById("mFn").value||"").trim();if(!fn)return alert("First name is required.");const ph=(document.getElementById("mPh").value||"").trim();const em=(document.getElementById("mEm").value||"").trim();if(!ph)return alert("Phone number is required.");if(!em||!em.includes("@"))return alert("Valid email address is required.");const id=Math.max(0,...S.players.map(p=>p.id))+1;const hcp=document.getElementById("mHcp").value;S.players.push({id,firstName:fn,lastName:(document.getElementById("mLn").value||"").trim(),phone:ph,email:em,handicap:hcp?Number(hcp):null,birthday:(document.getElementById("mBd").value||"").trim(),joinYear:Number(document.getElementById("mJy").value)||null,awards:[],bio:"",photo:null});closeModal();renderAll();}
+function previewPhoto(input){
+  if(!input.files||!input.files[0])return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const prev=document.getElementById("mPhotoPreview");
+    if(prev){prev.outerHTML='<img id="mPhotoPreview" src="'+e.target.result+'" style="width:80px;height:80px;object-fit:cover;border-radius:50%;display:block">';}
+    window._pendingPhoto=e.target.result;
+  };
+  reader.readAsDataURL(input.files[0]);
+}
+function removePhoto(){
+  window._pendingPhoto="REMOVE";
+  const prev=document.getElementById("mPhotoPreview");
+  if(prev){prev.outerHTML='<div id="mPhotoPreview" style="width:80px;height:80px;border-radius:50%;background:var(--bg-secondary);border:2px dashed var(--border-strong);display:flex;align-items:center;justify-content:center;font-size:24px">📷</div>';}
+}
 function confirmEdit(){confirmEditProfile();}
 function confirmEditProfile(){
   const p=S.players.find(x=>x.id===S._ep);if(!p)return;
@@ -1535,6 +1553,9 @@ function confirmEditProfile(){
   const aw=document.getElementById("mAw").value;
   p.awards=aw?aw.split(",").map(a=>a.trim()).filter(Boolean):[];
   p.bio=(document.getElementById("mBio").value||"").trim();
+  if(window._pendingPhoto==="REMOVE"){p.photo=null;}
+  else if(window._pendingPhoto){p.photo=window._pendingPhoto;}
+  window._pendingPhoto=null;
   save();closeModal();
   if(document.getElementById("pageDetail")&&document.getElementById("pageDetail").classList.contains("active"))renderDetail(p.id);
   renderAll();
