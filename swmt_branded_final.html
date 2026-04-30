@@ -1037,40 +1037,33 @@ function setRsvpFromModal(gameId,status){
 
 function renderStandings(){
   const st=getStandings(),ch=getRankChanges(),done=S.games.filter(g=>g.done).length,showChg=done>=2;
-  const mob=window.innerWidth<540;
-  const cols=mob
-    ?(showChg?"16px 28px 1fr 56px 40px 40px":"28px 1fr 56px 40px 40px")
-    :(showChg?"20px 36px 1fr 80px 48px 48px 50px 50px 56px 50px":"36px 1fr 80px 48px 48px 50px 50px 56px 50px");
-  // Compute tied ranks: players with equal total share the same rank number
+  const cols=showChg?"20px 36px 160px 70px 48px 48px 50px 50px 56px 50px":"36px 160px 70px 48px 48px 50px 50px 56px 50px";
   const ranks=[];
   st.forEach((p,i)=>{ranks.push(i===0?1:(p.total===st[i-1].total?ranks[i-1]:i+1));});
-  let h='<div class="table-wrap"><div class="t-head" style="grid-template-columns:'+cols+'">'+(showChg?'<span></span>':'')+
+  let h='<div style="overflow-x:auto;-webkit-overflow-scrolling:touch"><div class="table-wrap" style="min-width:560px"><div class="t-head" style="grid-template-columns:'+cols+'">'+(showChg?'<span></span>':'')+
     '<span>Rank</span><span>Player</span><span>Pts</span>'+
     '<span style="text-align:center;color:var(--green-light)">Birdie</span>'+
     '<span style="text-align:center;color:#60A0E0">Eagle</span>'+
-    (mob?'':
-      '<span style="text-align:center">Wins</span><span style="text-align:center">Top 3</span><span style="text-align:center">Played</span><span></span>'
-    )+'</div>';
+    '<span style="text-align:center">Wins</span><span style="text-align:center">Top 3</span><span style="text-align:center">Played</span><span></span>'+
+    '</div>';
   if(!st.length)h+='<div class="empty">No players yet. The family awaits.</div>';
   st.forEach((p,i)=>{
     const rank=ranks[i];
     const bc=rank===1?"p1":rank===2?"p2":rank===3?"p3":"pn";
     h+='<div class="t-row" style="grid-template-columns:'+cols+'">'+(showChg?rankChgEl(ch[p.id]):'')+
       '<div class="pos-badge '+bc+'" style="margin:auto">'+rank+'</div>'+
-      '<div style="display:flex;align-items:center;gap:6px;min-width:0;overflow:hidden">'+av(p,24)+'<span style="font-size:12px;font-weight:600;cursor:pointer;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" onclick="showProfileModal('+p.id+')">'+p.firstName+' '+p.lastName+donBadge(p.id)+'</span>'+(mob?'':''+hcpTag(p))+'</div>'+
+      '<div style="display:flex;align-items:center;gap:6px;min-width:0">'+av(p,24)+'<span style="font-size:12px;font-weight:600;cursor:pointer;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" onclick="showProfileModal('+p.id+')">'+p.firstName+' '+p.lastName+donBadge(p.id)+'</span>'+hcpTag(p)+'</div>'+
       '<div><span class="pts-badge '+ptsClass(p.total)+'">'+p.total+'</span></div>'+
       '<div style="text-align:center;font-size:13px;font-weight:'+(p.birdies>0?700:400)+';color:'+(p.birdies>0?'var(--green-light)':'var(--text-muted)')+'">'+p.birdies+'</div>'+
       '<div style="text-align:center;font-size:13px;font-weight:'+(p.eagles>0?700:400)+';color:'+(p.eagles>0?'#60A0E0':'var(--text-muted)')+'">'+p.eagles+'</div>'+
-      (mob?'':
-        '<div style="font-size:13px;text-align:center;font-weight:'+(p.wins>0?700:400)+';color:'+(p.wins>0?"var(--gold)":"var(--text-muted)")+'">'+p.wins+'</div>'+
-        '<div style="font-size:13px;text-align:center;color:var(--text-secondary)">'+p.top3+'</div>'+
-        '<div style="font-size:12px;text-align:center;color:var(--text-muted)">'+p.played+'</div>'+
-        '<div style="display:flex;gap:4px;justify-content:flex-end">'+(can("admin")?'<button class="btn-sm" onclick="openEdit('+p.id+')">Edit</button>':'')+'</div>'
-      )+
+      '<div style="font-size:13px;text-align:center;font-weight:'+(p.wins>0?700:400)+';color:'+(p.wins>0?"var(--gold)":"var(--text-muted)")+'">'+p.wins+'</div>'+
+      '<div style="font-size:13px;text-align:center;color:var(--text-secondary)">'+p.top3+'</div>'+
+      '<div style="font-size:12px;text-align:center;color:var(--text-muted)">'+p.played+'</div>'+
+      '<div style="display:flex;gap:4px;justify-content:flex-end">'+(can("admin")?'<button class="btn-sm" onclick="openEdit('+p.id+')">Edit</button>':'')+'</div>'+
     '</div>';
   });
   const legend=showChg?'<div style="display:flex;align-items:center;gap:14px;padding:8px 12px;border-top:1px solid var(--border);font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em"><span style="display:flex;align-items:center;gap:3px"><span style="color:var(--green-light);font-weight:700">▲</span> Moved up</span><span style="display:flex;align-items:center;gap:3px"><span style="color:var(--red);font-weight:700">▼</span> Moved down</span></div>':"";
-  document.getElementById("v0").innerHTML=h+"</div>"+legend;
+  document.getElementById("v0").innerHTML=h+"</div></div>"+legend;
 }
 
 function renderGames(){
