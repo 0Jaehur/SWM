@@ -11,13 +11,16 @@
 // ═══════════════════════════════════════════════════════════════════
 
 // ── SETUP ──────────────────────────────────────────────────────────
+// ⚠️  Do NOT put real credentials here — store them in Apps Script
+//     PropertiesService instead (Project Settings → Script Properties).
+//     Retrieve below with PropertiesService.getScriptProperties().getProperty("KEY")
 const SHEET_NAME       = "SWMT_Data";
-const TWILIO_SID       = "AC1e18b06cf321efdb732d01332bcab6ec";
-const TWILIO_TOKEN     = "ea178692211047fe13fdc1ff2490b836";
-const TWILIO_FROM      = "+18255331973";
+const TWILIO_SID       = "";   // set in Script Properties: TWILIO_SID
+const TWILIO_TOKEN     = "";   // set in Script Properties: TWILIO_TOKEN
+const TWILIO_FROM      = "";   // set in Script Properties: TWILIO_FROM  e.g. +18255331973
 const ONESIGNAL_APP_ID = "";   // OneSignal App ID (for push notifications)
 const ONESIGNAL_KEY    = "";   // OneSignal REST API Key
-const ADMIN_EMAIL      = "youngjaehur.ca@gmail.com";
+const ADMIN_EMAIL      = "";   // set in Script Properties: ADMIN_EMAIL
 // ──────────────────────────────────────────────────────────────────
 
 function doGet(e) {
