@@ -643,11 +643,14 @@ small{color:var(--text-secondary)}
 
 <!-- Global modal + FAB — outside all .page divs so they stay visible on any page -->
 <div id="modalArea"></div>
-<div id="adminButtons" style="position:fixed;bottom:calc(1.5rem + env(safe-area-inset-bottom,0px));right:1rem;display:none;flex-direction:column;gap:8px;z-index:90">
-  <button class="btn btn-gold" onclick="showModal('addGame')" title="Add game">+ Game</button>
-  <button class="btn" onclick="showModal('addPlayer')" title="Add player">+ Player</button>
-  <button class="btn" onclick="showModal('settings')" title="Settings">⚙</button>
-  <button class="btn" style="background:#7f1d1d;color:#fca5a5;border-color:#991b1b" onclick="showSeasonEndModal()" title="End Season">🏁 Season End</button>
+<div id="adminButtons" style="position:fixed;bottom:calc(1.5rem + env(safe-area-inset-bottom,0px));right:1rem;display:none;flex-direction:column;align-items:flex-end;gap:8px;z-index:90">
+  <div id="adminFabMenu" style="display:none;flex-direction:column;align-items:flex-end;gap:8px">
+    <button class="btn" style="background:#7f1d1d;color:#fca5a5;border-color:#991b1b;white-space:nowrap" onclick="showSeasonEndModal();closeFab()" title="End Season">🏁 Season End</button>
+    <button class="btn" onclick="showModal('settings');closeFab()" title="Settings" style="white-space:nowrap">⚙ Settings</button>
+    <button class="btn" onclick="showModal('addPlayer');closeFab()" title="Add player" style="white-space:nowrap">+ Player</button>
+    <button class="btn btn-gold" onclick="showModal('addGame');closeFab()" title="Add game" style="white-space:nowrap">+ Game</button>
+  </div>
+  <button id="adminFabToggle" class="btn btn-gold" onclick="toggleFab()" style="border-radius:50%;width:48px;height:48px;padding:0;font-size:24px;line-height:1;box-shadow:0 4px 16px rgba(0,0,0,.5)">+</button>
 </div>
 
 <script>
@@ -1954,6 +1957,20 @@ function confirmSeasonEnd(){
   alert('✅ Season '+nextSeason+' started! All game data has been reset.');
 }
 
+function toggleFab(){
+  const menu=document.getElementById("adminFabMenu");
+  const toggle=document.getElementById("adminFabToggle");
+  if(!menu)return;
+  const open=menu.style.display==="flex";
+  menu.style.display=open?"none":"flex";
+  if(toggle)toggle.textContent=open?"+":"✕";
+}
+function closeFab(){
+  const menu=document.getElementById("adminFabMenu");
+  const toggle=document.getElementById("adminFabToggle");
+  if(menu)menu.style.display="none";
+  if(toggle)toggle.textContent="+";
+}
 function logout(){
   SESSION={pid:null,role:"guest",name:"Guest",loggedIn:false};
   localStorage.removeItem("swmt_session");
