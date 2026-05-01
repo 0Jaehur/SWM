@@ -113,12 +113,12 @@ small{color:var(--text-secondary)}
 
 /* ── VIEW TABS — modern segmented pill ── */
 .view-tabs-outer{position:relative;margin-bottom:1.5rem}
-.sarr{position:absolute;top:50%;z-index:10;pointer-events:none;font-size:20px;line-height:1;opacity:0;transition:opacity .3s}
+.sarr{position:absolute;top:50%;z-index:10;pointer-events:none;width:18px;height:18px;border-radius:50%;background:var(--bg-secondary);border:1px solid var(--border-light);box-shadow:0 1px 6px rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--text-secondary);opacity:0;transition:opacity .3s;line-height:1}
 .sarr.vis{opacity:1}
-.sarr-r{right:4px;transform:translateY(-50%);animation:sarrR 1s ease-in-out infinite}
-.sarr-l{left:4px;transform:translateY(-50%);animation:sarrL 1s ease-in-out infinite}
-@keyframes sarrR{0%,100%{transform:translateY(-50%) translateX(0)}50%{transform:translateY(-50%) translateX(6px)}}
-@keyframes sarrL{0%,100%{transform:translateY(-50%) translateX(0)}50%{transform:translateY(-50%) translateX(-6px)}}
+.sarr-r{right:-9px;transform:translateY(-50%);animation:sarrR .9s ease-in-out infinite}
+.sarr-l{left:-9px;transform:translateY(-50%);animation:sarrL .9s ease-in-out infinite}
+@keyframes sarrR{0%,100%{transform:translateY(-50%) translateX(0)}50%{transform:translateY(-50%) translateX(3px)}}
+@keyframes sarrL{0%,100%{transform:translateY(-50%) translateX(0)}50%{transform:translateY(-50%) translateX(-3px)}}
 .view-tabs{display:flex;gap:2px;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:4px;background:#0d2b18;border:1px solid #1e5233;border-radius:var(--radius-lg);box-shadow:var(--shadow-inset);scrollbar-width:none}
 .view-tabs::-webkit-scrollbar{display:none}
 .vtab{padding:8px 14px;font-size:11px;font-weight:600;border:none;border-radius:8px;background:transparent;color:var(--text-muted);cursor:pointer;letter-spacing:.06em;text-transform:uppercase;transition:color .15s var(--ease),background .15s var(--ease);font-family:inherit;display:inline-flex;align-items:center;gap:5px;line-height:1.2;white-space:nowrap}
@@ -601,7 +601,7 @@ small{color:var(--text-secondary)}
   <div class="app">
     <div class="stat-grid" id="statGrid"></div>
     <div class="view-tabs-outer">
-    <div class="sarr sarr-l" id="tabsArrL">👈</div>
+    <div class="sarr sarr-l" id="tabsArrL">&#8249;</div>
     <div class="view-tabs" id="viewTabsScroll">
       <button class="vtab active" id="vtab0" onclick="setView(0,this)">Standings</button>
       <button class="vtab" id="vtab1" onclick="setView(1,this)">Game Scores</button>
@@ -612,7 +612,7 @@ small{color:var(--text-secondary)}
       <button class="vtab" id="vtab2" onclick="setView(2,this)">Points Table</button>
       <button class="vtab" id="vtab7" onclick="setView(7,this)">News</button>
     </div>
-    <div class="sarr sarr-r" id="tabsArrR">👉</div>
+    <div class="sarr sarr-r" id="tabsArrR">&#8250;</div>
     </div>
     <div id="v0"></div>
     <div id="v1" style="display:none"></div>
@@ -1101,7 +1101,7 @@ function renderStandings(){
     h+=`</div>`;
   });
   const legend=showChg?`<div style="display:flex;align-items:center;gap:14px;padding:8px 12px;border-top:1px solid var(--border);font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em"><span style="display:flex;align-items:center;gap:3px"><span style="color:var(--green-light);font-weight:700">▲</span> Moved up</span><span style="display:flex;align-items:center;gap:3px"><span style="color:var(--red);font-weight:700">▼</span> Moved down</span></div>`:"";
-  document.getElementById("v0").innerHTML=h+`</div></div><div class="sarr sarr-l" id="standArrL">👈</div><div class="sarr sarr-r" id="standArrR">👉</div></div>`+legend;
+  document.getElementById("v0").innerHTML=h+`</div></div><div class="sarr sarr-l" id="standArrL">&#8249;</div><div class="sarr sarr-r" id="standArrR">&#8250;</div></div>`+legend;
   setTimeout(()=>initScrollArrows(
     document.getElementById("standScroll"),
     document.getElementById("standArrL"),
@@ -1167,11 +1167,22 @@ function renderPts(){
       '<p style="font-size:12px;color:var(--text-muted);letter-spacing:.02em;line-height:1.5">Points per NET finishing position by game class. Each game uses its assigned class table. Tied players split combined points evenly.</p>'+
       (can("admin")?'<button class="btn" onclick="showModal(\'editPts\')">Edit</button>':'')+
     '</div>'+
-    '<div class="pts-table"><div class="pts-row pts-row-hd pts-row-2">'+
-      '<span>Finish</span>'+
-      '<span class="pts-class-hd pts-class-a">Class A<br><span class="pts-class-sub">Game Points</span></span>'+
-      '<span class="pts-class-hd pts-class-b">Class B<br><span class="pts-class-sub">Game Points</span></span>'+
-    '</div>'+rows+'</div>';
+    '<div style="position:relative">'+
+      '<div id="ptsScroll" style="overflow-x:auto;-webkit-overflow-scrolling:touch">'+
+        '<div class="pts-table"><div class="pts-row pts-row-hd pts-row-2">'+
+          '<span>Finish</span>'+
+          '<span class="pts-class-hd pts-class-a">Class A<br><span class="pts-class-sub">Game Points</span></span>'+
+          '<span class="pts-class-hd pts-class-b">Class B<br><span class="pts-class-sub">Game Points</span></span>'+
+        '</div>'+rows+'</div>'+
+      '</div>'+
+      '<div class="sarr sarr-l" id="ptsArrL">&#8249;</div>'+
+      '<div class="sarr sarr-r" id="ptsArrR">&#8250;</div>'+
+    '</div>';
+  setTimeout(()=>initScrollArrows(
+    document.getElementById("ptsScroll"),
+    document.getElementById("ptsArrL"),
+    document.getElementById("ptsArrR")
+  ),50);
 }
 
 // ── SCHEDULE / CALENDAR ──
