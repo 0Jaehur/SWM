@@ -1,8 +1,13 @@
 // SWMT Service Worker – push notifications + PWA
-const CACHE = "swmt-v1";
+const CACHE = "swmt-v2";
 
-self.addEventListener("install", () => self.skipWaiting());
+self.addEventListener("install", () => { /* wait for SKIP_WAITING message before taking over */ });
 self.addEventListener("activate", e => e.waitUntil(clients.claim()));
+
+// Allow the page to trigger immediate takeover
+self.addEventListener("message", e => {
+  if (e.data && e.data.type === "SKIP_WAITING") self.skipWaiting();
+});
 
 self.addEventListener("push", e => {
   const d = e.data ? e.data.json() : {};

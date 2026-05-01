@@ -566,6 +566,11 @@ small{color:var(--text-secondary)}
 .role-badge.admin{background:var(--gold-bg);color:var(--gold-light);border:1px solid rgba(212,185,118,.35)}
 .role-badge.member{background:var(--green-bg);color:var(--green-light);border:1px solid rgba(92,184,124,.35)}
 .role-badge.guest{background:var(--silver-bg);color:var(--silver);border:1px solid var(--border-light)}
+#updateBanner{display:none;position:fixed;top:0;left:0;right:0;z-index:9999;background:linear-gradient(135deg,#1a3a1a,#2d5a2d);border-bottom:2px solid #4caf50;padding:12px 16px;align-items:center;justify-content:space-between;gap:12px;box-shadow:0 4px 20px rgba(0,0,0,.5)}
+#updateBanner.show{display:flex}
+#updateBanner .ub-msg{font-size:13px;font-weight:600;color:#e8f5e9;flex:1;line-height:1.4}
+#updateBanner .ub-msg span{display:block;font-size:11px;font-weight:400;color:#a5d6a7;margin-top:2px}
+#updateBanner .ub-btn{flex-shrink:0;background:#4caf50;color:#fff;border:none;border-radius:20px;padding:7px 16px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap}
 </style>
 </head>
 <body>
@@ -642,6 +647,10 @@ small{color:var(--text-secondary)}
 </div>
 
 <!-- Global modal + FAB — outside all .page divs so they stay visible on any page -->
+<div id="updateBanner">
+  <div class="ub-msg">🆕 새 버전이 준비됐습니다<span>앱을 완전히 닫고 다시 열거나 아래 버튼을 눌러주세요</span></div>
+  <button class="ub-btn" onclick="doAppUpdate()">지금 업데이트</button>
+</div>
 <div id="modalArea"></div>
 <div id="adminButtons" style="position:fixed;bottom:calc(1.5rem + env(safe-area-inset-bottom,0px));right:1rem;display:none;flex-direction:column;align-items:flex-end;gap:8px;z-index:90">
   <div id="adminFabMenu" style="display:none;flex-direction:column;align-items:flex-end;gap:8px">
@@ -3198,10 +3207,40 @@ function getTotalUnread(){
 function refreshAppBadge(){updateBadge(getTotalUnread());}
 
 // ── SERVICE WORKER + PUSH ──
+function showUpdateBanner(){
+  const b=document.getElementById("updateBanner");
+  if(b)b.classList.add("show");
+}
+function doAppUpdate(){
+  if(window._swWaiting){
+    window._swWaiting.postMessage({type:"SKIP_WAITING"});
+  }else{
+    window.location.reload();
+  }
+}
 (async()=>{
   if(!("serviceWorker" in navigator))return;
   try{
     const reg=await navigator.serviceWorker.register("sw.js");
+    // Detect when a new SW has installed and is waiting
+    const checkWaiting=(r)=>{
+      if(r.waiting&&navigator.serviceWorker.controller){
+        window._swWaiting=r.waiting;
+        showUpdateBanner();
+      }
+    };
+    checkWaiting(reg);
+    reg.addEventListener("updatefound",()=>{
+      const nw=reg.installing;
+      nw.addEventListener("statechange",()=>{
+        if(nw.state==="installed")checkWaiting(reg);
+      });
+    });
+    // When SW takes over (after SKIP_WAITING), reload to apply new code
+    let reloading=false;
+    navigator.serviceWorker.addEventListener("controllerchange",()=>{
+      if(!reloading){reloading=true;window.location.reload();}
+    });
     if("PushManager" in window&&CONFIG.oneSignalAppId===""){
       if(Notification.permission==="default"){
         const p=await Notification.requestPermission();
