@@ -113,7 +113,12 @@ small{color:var(--text-secondary)}
 
 /* ── VIEW TABS — modern segmented pill ── */
 .view-tabs-outer{position:relative;margin-bottom:1.5rem}
-.view-tabs-outer::after{content:'';position:absolute;right:0;top:0;bottom:0;width:36px;background:linear-gradient(to right,transparent,#0d2b18 90%);border-radius:0 var(--radius-lg) var(--radius-lg) 0;pointer-events:none}
+.sarr{position:absolute;top:50%;z-index:10;pointer-events:none;font-size:20px;line-height:1;opacity:0;transition:opacity .3s}
+.sarr.vis{opacity:1}
+.sarr-r{right:4px;transform:translateY(-50%);animation:sarrR 1s ease-in-out infinite}
+.sarr-l{left:4px;transform:translateY(-50%);animation:sarrL 1s ease-in-out infinite}
+@keyframes sarrR{0%,100%{transform:translateY(-50%) translateX(0)}50%{transform:translateY(-50%) translateX(6px)}}
+@keyframes sarrL{0%,100%{transform:translateY(-50%) translateX(0)}50%{transform:translateY(-50%) translateX(-6px)}}
 .view-tabs{display:flex;gap:2px;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:4px;background:#0d2b18;border:1px solid #1e5233;border-radius:var(--radius-lg);box-shadow:var(--shadow-inset);scrollbar-width:none}
 .view-tabs::-webkit-scrollbar{display:none}
 .vtab{padding:8px 14px;font-size:11px;font-weight:600;border:none;border-radius:8px;background:transparent;color:var(--text-muted);cursor:pointer;letter-spacing:.06em;text-transform:uppercase;transition:color .15s var(--ease),background .15s var(--ease);font-family:inherit;display:inline-flex;align-items:center;gap:5px;line-height:1.2;white-space:nowrap}
@@ -596,7 +601,8 @@ small{color:var(--text-secondary)}
   <div class="app">
     <div class="stat-grid" id="statGrid"></div>
     <div class="view-tabs-outer">
-    <div class="view-tabs">
+    <div class="sarr sarr-l" id="tabsArrL">👈</div>
+    <div class="view-tabs" id="viewTabsScroll">
       <button class="vtab active" id="vtab0" onclick="setView(0,this)">Standings</button>
       <button class="vtab" id="vtab1" onclick="setView(1,this)">Game Scores</button>
       <button class="vtab" id="vtab3" onclick="setView(3,this)">Schedule <span class="unread-badge" id="scheduleUnreadBadge" style="display:none">0</span></button>
@@ -606,6 +612,7 @@ small{color:var(--text-secondary)}
       <button class="vtab" id="vtab2" onclick="setView(2,this)">Points Table</button>
       <button class="vtab" id="vtab7" onclick="setView(7,this)">News</button>
     </div>
+    <div class="sarr sarr-r" id="tabsArrR">👉</div>
     </div>
     <div id="v0"></div>
     <div id="v1" style="display:none"></div>
@@ -1062,7 +1069,7 @@ function renderStandings(){
   const hdrRow=`display:grid;grid-template-columns:${cols};background:${hBg};border-bottom:1px solid var(--border);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-muted)`;
   const dataRow=`display:grid;grid-template-columns:${cols};border-bottom:1px solid var(--border);align-items:stretch`;
 
-  let h=`<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm),var(--shadow-inset);background:${rBg}">`;
+  let h=`<div style="position:relative"><div id="standScroll" style="overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm),var(--shadow-inset);background:${rBg}">`;
   h+=`<div style="min-width:${chW+rW+pW+68+44+44+46+46+52}px">`;
   h+=`<div style="${hdrRow}">`;
   if(showChg)h+=`<div style="${cell()}"></div>`;
@@ -1094,7 +1101,12 @@ function renderStandings(){
     h+=`</div>`;
   });
   const legend=showChg?`<div style="display:flex;align-items:center;gap:14px;padding:8px 12px;border-top:1px solid var(--border);font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.04em"><span style="display:flex;align-items:center;gap:3px"><span style="color:var(--green-light);font-weight:700">▲</span> Moved up</span><span style="display:flex;align-items:center;gap:3px"><span style="color:var(--red);font-weight:700">▼</span> Moved down</span></div>`:"";
-  document.getElementById("v0").innerHTML=h+`</div></div>`+legend;
+  document.getElementById("v0").innerHTML=h+`</div></div><div class="sarr sarr-l" id="standArrL">👈</div><div class="sarr sarr-r" id="standArrR">👉</div></div>`+legend;
+  setTimeout(()=>initScrollArrows(
+    document.getElementById("standScroll"),
+    document.getElementById("standArrL"),
+    document.getElementById("standArrR")
+  ),50);
 }
 
 function renderGames(){
@@ -1908,6 +1920,12 @@ function enterApp(){
   [0,1,2,3,4,5,6,7].forEach(n=>{const v=document.getElementById("v"+n);if(v)v.style.display=n===0?"":"none";});
   const ab=document.getElementById("adminButtons");if(ab)ab.style.display=can("admin")?"flex":"none";
   updateUserBar();renderAll();
+  // Init tab scroll arrows (slight delay so DOM is laid out)
+  setTimeout(()=>initScrollArrows(
+    document.getElementById("viewTabsScroll"),
+    document.getElementById("tabsArrL"),
+    document.getElementById("tabsArrR")
+  ),100);
 }
 
 // ── SEASON END ──────────────────────────────────────────────────
@@ -1966,6 +1984,19 @@ function confirmSeasonEnd(){
   alert('✅ Season '+nextSeason+' started! All game data has been reset.');
 }
 
+function initScrollArrows(scrollEl,leftEl,rightEl){
+  if(!scrollEl)return;
+  const update=()=>{
+    const l=scrollEl.scrollLeft>8;
+    const r=scrollEl.scrollLeft<scrollEl.scrollWidth-scrollEl.clientWidth-8;
+    if(leftEl)leftEl.classList.toggle("vis",l);
+    if(rightEl)rightEl.classList.toggle("vis",r);
+  };
+  scrollEl.addEventListener("scroll",update,{passive:true});
+  // re-check on resize
+  if(window.ResizeObserver){new ResizeObserver(update).observe(scrollEl);}
+  update();
+}
 function toggleFab(){
   const menu=document.getElementById("adminFabMenu");
   const toggle=document.getElementById("adminFabToggle");
