@@ -1532,6 +1532,8 @@ function showModal(type,data){
     }
     area.innerHTML=wrap('<h2>Edit Points Tables</h2><p style="font-size:11px;color:var(--text-muted);margin-bottom:10px">Class A is used for standard games. Class B is used for higher-stakes games.</p>'+rows+'<div class="row-btns"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-gold" onclick="confirmPts()">Save</button></div>');
   }
+  // Wire +1 prefix guard on any tel inputs in the modal
+  setTimeout(()=>{document.querySelectorAll('#modalArea [type="tel"]').forEach(el=>setupPhoneInput(el.id));},0);
 }
 function closeModal(){document.getElementById("modalArea").innerHTML="";}
 function reqAdmin(){closeModal();setTimeout(()=>showModal("adminPin"),50);}
@@ -1856,6 +1858,7 @@ function showForceProfileSetup(pid,missing){
     '<div id="fpPErr" style="color:var(--red);font-size:12px;margin-bottom:10px;display:none"></div>'+
     '<button class="btn btn-gold" style="width:100%" onclick="confirmForceProfileSetup('+pid+')">Save &amp; Enter App →</button>'+
   '</div></div>';
+  setupPhoneInput("fpPh");
   document.getElementById("fpPh").focus();
 }
 
@@ -1959,6 +1962,22 @@ function logout(){
   updateUserBar();renderAll();
 }
 
+function setupPhoneInput(id){
+  const el=document.getElementById(id);
+  if(!el)return;
+  const PREFIX="+1 ";
+  if(!el.value.startsWith(PREFIX))el.value=PREFIX;
+  const guard=()=>{
+    if(!el.value.startsWith(PREFIX)){el.value=PREFIX+(el.value.replace(/^\+1\s*/,""));}
+    if(el.selectionStart<PREFIX.length)el.setSelectionRange(PREFIX.length,PREFIX.length);
+  };
+  el.addEventListener("focus",()=>{if(el.selectionStart<PREFIX.length)el.setSelectionRange(PREFIX.length,PREFIX.length);});
+  el.addEventListener("keydown",(e)=>{
+    if((e.key==="Backspace"||e.key==="Delete")&&el.selectionStart<=PREFIX.length&&el.selectionEnd<=PREFIX.length){e.preventDefault();}
+  });
+  el.addEventListener("input",guard);
+  el.addEventListener("click",()=>{if(el.selectionStart<PREFIX.length)el.setSelectionRange(PREFIX.length,PREFIX.length);});
+}
 function updateUserBar(){
   const name=document.getElementById("userBarName");
   const roleEl=document.getElementById("userBarRole");
@@ -1970,6 +1989,24 @@ function updateUserBar(){
     roleEl.className="role-badge "+(sessionIsDon()?"admin":SESSION.role);
   }
   if(av)av.innerHTML=SESSION.pid||SESSION.role==="admin"?avByName(SESSION.name,24):'<div style="width:24px;height:24px;border-radius:50%;background:var(--border);display:inline-flex;align-items:center;justify-content:center;font-size:11px;color:var(--text-muted)">G</div>';
+  // Show rank + pts badge for members
+  let statsEl=document.getElementById("userBarStats");
+  if(!statsEl){
+    const left=document.getElementById("userBarLeft");
+    if(left){statsEl=document.createElement("span");statsEl.id="userBarStats";left.appendChild(statsEl);}
+  }
+  if(statsEl){
+    if(SESSION.role==="member"&&SESSION.pid){
+      const st=getStandings();
+      const idx=st.findIndex(p=>p.id===SESSION.pid);
+      if(idx>=0){
+        const rank=idx===0?1:(st[idx].total===st[idx-1].total?(idx>1&&st[idx].total===st[0].total?1:idx):idx+1);
+        const pts=st[idx].total;
+        const rc=rank===1?"rank-gold":rank===2?"rank-silver":rank===3?"rank-bronze":"";
+        statsEl.innerHTML='<span style="display:inline-flex;align-items:center;gap:4px;background:var(--bg-secondary);border:1px solid var(--border);border-radius:20px;padding:2px 8px;font-size:11px;font-weight:700"><span class="'+rc+'">#'+rank+'</span><span style="color:var(--gold)">'+pts+'pts</span></span>';
+      }else{statsEl.innerHTML="";}
+    }else{statsEl.innerHTML="";}
+  }
   if(right){
     if(SESSION.role==="guest"){
       right.innerHTML='<button class="btn btn-sm" onclick="showModal(\'joinRequest\')" style="font-size:11px;padding:4px 10px">+ Join</button><button class="btn btn-gold btn-sm" onclick="showLoginModal()" style="font-size:11px;padding:4px 12px">Login</button>';
