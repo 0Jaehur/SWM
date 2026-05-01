@@ -4,23 +4,26 @@
 // Setup instructions:
 //  1. Go to https://script.google.com → create a new project
 //  2. Paste this entire file into the editor
-//  3. Deploy > New deployment > Type: Web App
-//     - Execute as: Me
-//     - Who has access: Anyone
-//  4. Copy the deployment URL → paste into CONFIG.appsScriptUrl in the HTML file
+//  3. Project Settings → Script Properties → Add the following:
+//       TWILIO_SID    = ACxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+//       TWILIO_TOKEN  = (new token from console.twilio.com)
+//       TWILIO_FROM   = +18255331973
+//       ADMIN_EMAIL   = youngjaehur.ca@gmail.com
+//  4. Deploy > New deployment > Type: Web App
+//       - Execute as: Me
+//       - Who has access: Anyone
+//  5. Copy the deployment URL → paste into CONFIG.appsScriptUrl in the HTML file
 // ═══════════════════════════════════════════════════════════════════
 
 // ── SETUP ──────────────────────────────────────────────────────────
-// ⚠️  Do NOT put real credentials here — store them in Apps Script
-//     PropertiesService instead (Project Settings → Script Properties).
-//     Retrieve below with PropertiesService.getScriptProperties().getProperty("KEY")
-const SHEET_NAME       = "SWMT_Data";
-const TWILIO_SID       = "";   // set in Script Properties: TWILIO_SID
-const TWILIO_TOKEN     = "";   // set in Script Properties: TWILIO_TOKEN
-const TWILIO_FROM      = "";   // set in Script Properties: TWILIO_FROM  e.g. +18255331973
-const ONESIGNAL_APP_ID = "";   // OneSignal App ID (for push notifications)
-const ONESIGNAL_KEY    = "";   // OneSignal REST API Key
-const ADMIN_EMAIL      = "";   // set in Script Properties: ADMIN_EMAIL
+const PROPS          = PropertiesService.getScriptProperties();
+const SHEET_NAME     = "SWMT_Data";
+const TWILIO_SID     = PROPS.getProperty("TWILIO_SID")   || "";
+const TWILIO_TOKEN   = PROPS.getProperty("TWILIO_TOKEN") || "";
+const TWILIO_FROM    = PROPS.getProperty("TWILIO_FROM")  || "";
+const ONESIGNAL_APP_ID = "";   // OneSignal App ID (optional – for push notifications)
+const ONESIGNAL_KEY    = "";   // OneSignal REST API Key (optional)
+const ADMIN_EMAIL    = PROPS.getProperty("ADMIN_EMAIL")  || "";
 // ──────────────────────────────────────────────────────────────────
 
 function doGet(e) {
@@ -88,7 +91,6 @@ function sendNotifications(post, players) {
   const smsText = "[SWMT] " + post.author + " posted: \"" + post.title + "\" — Open the app to read.";
 
   players.forEach(function (player) {
-    // Send email
     if (player.email && player.email.indexOf("@") > 0) {
       try {
         MailApp.sendEmail({ to: player.email, subject: subject, body: emailBody });
@@ -97,7 +99,6 @@ function sendNotifications(post, players) {
       }
     }
 
-    // Send SMS via Twilio
     if (player.phone && TWILIO_SID && TWILIO_TOKEN) {
       try {
         twilioSMS(player.phone, smsText);
@@ -107,7 +108,6 @@ function sendNotifications(post, players) {
     }
   });
 
-  // OneSignal push notification
   if (ONESIGNAL_APP_ID && ONESIGNAL_KEY) {
     try { oneSignalPush(subject, post.body.slice(0, 100)); } catch (e) { Logger.log("Push failed: " + e.message); }
   }
@@ -180,10 +180,6 @@ function sendAdminNotification(req) {
     MailApp.sendEmail({ to: ADMIN_EMAIL, subject: subject, body: body });
   } catch (e) {
     Logger.log("Admin notify failed: " + e.message);
-  }
-  // Also SMS the admin if Twilio is configured
-  if (TWILIO_SID && TWILIO_TOKEN && TWILIO_FROM && ADMIN_EMAIL) {
-    // No direct admin phone stored — skipping SMS unless you add ADMIN_PHONE constant
   }
 }
 
