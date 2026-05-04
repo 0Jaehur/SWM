@@ -1060,7 +1060,7 @@ function renderStandings(){
   st.forEach((p,i)=>{ranks.push(i===0?1:(p.total===st[i-1].total?ranks[i-1]:i+1));});
   const rW=36,pW=148,chW=showChg?20:0;
   const rL=chW,pL=chW+rW;
-  const cols=(showChg?"20px ":"")+rW+"px "+pW+"px 68px 44px 44px 46px 46px 52px"+(can("admin")?" 44px":"");
+  const cols=(showChg?"20px ":"")+rW+"px "+pW+"px 44px 68px 44px 44px 46px 46px 52px"+(can("admin")?" 44px":"");
   const hBg="var(--bg-secondary)",rBg="var(--bg-card)";
   const shadow="box-shadow:3px 0 8px rgba(0,0,0,.45)";
   const sRank=(bg)=>`position:sticky;left:${rL}px;z-index:2;background:${bg}`;
@@ -1070,11 +1070,12 @@ function renderStandings(){
   const dataRow=`display:grid;grid-template-columns:${cols};border-bottom:1px solid var(--border);align-items:stretch`;
 
   let h=`<div style="position:relative"><div id="standScroll" style="overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm),var(--shadow-inset);background:${rBg}">`;
-  h+=`<div style="min-width:${chW+rW+pW+68+44+44+46+46+52}px">`;
+  h+=`<div style="min-width:${chW+rW+pW+44+68+44+44+46+46+52}px">`;
   h+=`<div style="${hdrRow}">`;
   if(showChg)h+=`<div style="${cell()}"></div>`;
   h+=`<div style="${cell("justify-content:center;")};${sRank(hBg)}">Rank</div>`;
   h+=`<div style="${cell()};${sPlayer(hBg)}">Player</div>`;
+  h+=`<div style="${cell("justify-content:center;color:var(--gold)")}">HCP</div>`;
   h+=`<div style="${cell("justify-content:center")}">Pts</div>`;
   h+=`<div style="${cell("justify-content:center;color:var(--green-light)")}">Birdie</div>`;
   h+=`<div style="${cell("justify-content:center;color:#60A0E0")}">Eagle</div>`;
@@ -1091,6 +1092,7 @@ function renderStandings(){
     if(showChg)h+=`<div style="${cell("justify-content:center")}">${rankChgEl(ch[p.id])}</div>`;
     h+=`<div style="${cell("justify-content:center")};${sRank(rBg)}"><div class="pos-badge ${bc}" style="margin:auto">${rank}</div></div>`;
     h+=`<div style="${cell("gap:6px;overflow:hidden")};${sPlayer(rBg)}">${av(p,24)}<span style="font-size:12px;font-weight:600;cursor:pointer;color:var(--text-primary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis" onclick="showProfileModal(${p.id})">${p.firstName} ${p.lastName}${donBadge(p.id)}</span></div>`;
+    h+=`<div style="${cell("justify-content:center;font-size:13px;font-weight:600;color:var(--gold)")}">${p.handicap!=null?p.handicap:"—"}</div>`;
     h+=`<div style="${cell("justify-content:center")}"><span class="pts-badge ${ptsClass(p.total)}">${p.total}</span></div>`;
     h+=`<div style="${cell("justify-content:center;font-size:13px;font-weight:"+(p.birdies>0?700:400)+";color:"+(p.birdies>0?"var(--green-light)":"var(--text-muted)"))}">${p.birdies}</div>`;
     h+=`<div style="${cell("justify-content:center;font-size:13px;font-weight:"+(p.eagles>0?700:400)+";color:"+(p.eagles>0?"#60A0E0":"var(--text-muted)"))}">${p.eagles}</div>`;
