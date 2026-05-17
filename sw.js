@@ -1,5 +1,5 @@
 // SWMT Service Worker – push notifications + PWA
-const CACHE = "swmt-v2";
+const CACHE = "swmt-v3";
 
 self.addEventListener("install", () => { /* wait for SKIP_WAITING message before taking over */ });
 self.addEventListener("activate", e => e.waitUntil(clients.claim()));

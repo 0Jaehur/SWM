@@ -113,12 +113,13 @@ small{color:var(--text-secondary)}
 
 /* ── VIEW TABS — modern segmented pill ── */
 .view-tabs-outer{position:relative;margin-bottom:1.5rem}
-.sarr{position:absolute;top:50%;z-index:10;pointer-events:none;width:18px;height:18px;border-radius:50%;background:var(--bg-secondary);border:1px solid var(--border-light);box-shadow:0 1px 6px rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--text-secondary);opacity:0;transition:opacity .3s;line-height:1}
-.sarr.vis{opacity:1}
-.sarr-r{right:-9px;transform:translateY(-50%);animation:sarrR .9s ease-in-out infinite}
-.sarr-l{left:-9px;transform:translateY(-50%);animation:sarrL .9s ease-in-out infinite}
-@keyframes sarrR{0%,100%{transform:translateY(-50%) translateX(0)}50%{transform:translateY(-50%) translateX(3px)}}
-@keyframes sarrL{0%,100%{transform:translateY(-50%) translateX(0)}50%{transform:translateY(-50%) translateX(-3px)}}
+.sarr{position:absolute;top:50%;z-index:10;pointer-events:none;width:28px;height:28px;border-radius:50%;background:linear-gradient(180deg,var(--gold) 0%,#B89A5C 100%);border:1.5px solid var(--gold-light);display:flex;align-items:center;justify-content:center;font-size:17px;font-weight:900;color:#0E1118;opacity:0;transition:opacity .3s;line-height:1;text-shadow:0 1px 0 rgba(255,255,255,.25)}
+.sarr.vis{opacity:1;animation:sarrGlow 1.4s ease-in-out infinite}
+.sarr-r{right:-14px;transform:translateY(-50%);animation:sarrR .85s ease-in-out infinite,sarrGlow 1.4s ease-in-out infinite}
+.sarr-l{left:-14px;transform:translateY(-50%);animation:sarrL .85s ease-in-out infinite,sarrGlow 1.4s ease-in-out infinite}
+@keyframes sarrR{0%,100%{transform:translateY(-50%) translateX(0)}50%{transform:translateY(-50%) translateX(7px)}}
+@keyframes sarrL{0%,100%{transform:translateY(-50%) translateX(0)}50%{transform:translateY(-50%) translateX(-7px)}}
+@keyframes sarrGlow{0%,100%{box-shadow:0 0 0 2px rgba(11,16,24,.55),0 2px 10px rgba(212,185,118,.45),0 0 14px rgba(212,185,118,.35)}50%{box-shadow:0 0 0 2px rgba(11,16,24,.55),0 3px 18px rgba(234,208,136,.85),0 0 28px rgba(234,208,136,.65)}}
 .view-tabs{display:flex;gap:2px;flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;padding:4px;background:#0d2b18;border:1px solid #1e5233;border-radius:var(--radius-lg);box-shadow:var(--shadow-inset);scrollbar-width:none}
 .view-tabs::-webkit-scrollbar{display:none}
 .vtab{padding:8px 14px;font-size:11px;font-weight:600;border:none;border-radius:8px;background:transparent;color:var(--text-muted);cursor:pointer;letter-spacing:.06em;text-transform:uppercase;transition:color .15s var(--ease),background .15s var(--ease);font-family:inherit;display:inline-flex;align-items:center;gap:5px;line-height:1.2;white-space:nowrap}
@@ -297,6 +298,9 @@ small{color:var(--text-secondary)}
 .cal-cell.selected{background:var(--gold-bg);box-shadow:inset 0 0 0 2px var(--gold)}
 .cal-cell.has-game{background:var(--green-bg)}
 .cal-cell.has-game.selected{background:var(--gold-bg);box-shadow:inset 0 0 0 2px var(--gold)}
+.cal-cell.has-event:not(.has-game){background:rgba(106,149,212,.10)}
+.cal-cell.has-event.selected:not(.has-game){box-shadow:inset 0 0 0 2px var(--blue-light)}
+.cal-event-name{font-size:9px;color:var(--blue-light);text-transform:uppercase;letter-spacing:.04em;font-weight:700;line-height:1.1;text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px}
 .cal-day-num{font-size:13px;font-weight:600;color:var(--text-primary)}
 .cal-game-dot{width:6px;height:6px;border-radius:50%;background:var(--green-light)}
 .cal-game-name{font-size:9px;color:var(--green-light);text-transform:uppercase;letter-spacing:.04em;font-weight:700;line-height:1;text-align:center;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -786,7 +790,7 @@ const CONFIG={
 };
 let SESSION={pid:null,role:"guest",name:"Guest",loggedIn:false};
 
-let S={name:"Shoe Wedge Mafia Cup",totalGames:13,players:[],games:[],pointsTableA:DEFAULT_PTS_A.slice(),pointsTableB:DEFAULT_PTS_B.slice(),pendingMembers:[],view:0,game:0,adminMode:false,theDonId:null,seasonLabel:2026};
+let S={name:"Shoe Wedge Mafia Cup",totalGames:13,players:[],games:[],events:[],pointsTableA:DEFAULT_PTS_A.slice(),pointsTableB:DEFAULT_PTS_B.slice(),pendingMembers:[],view:0,game:0,adminMode:false,theDonId:null,seasonLabel:2026};
 
 function initPlayers(){
   const members=[
@@ -822,6 +826,8 @@ function fixAll(){
   S.players.forEach(p=>{if(!p.birthday)p.birthday="Jan 01";if(!p.joinYear||p.joinYear===2026){const jy=_JOIN_YEARS[p.firstName+" "+p.lastName];if(jy)p.joinYear=jy;else if(!p.joinYear)p.joinYear=2020;}if(!p.awards)p.awards=[];if(!p.bio)p.bio="";if(p.photo===undefined)p.photo=null;if(p.handicap==null)p.handicap=90;if(!p.phone)p.phone="";if(!p.email)p.email="";if(!p.pin)p.pin="0000";if(!p.role)p.role="member";if(p.inactive===undefined)p.inactive=false;});
   S.games.forEach((g,idx)=>{if(!g.holes)g.holes={};if(!g.pars)g.pars=DEFAULT_PARS.slice();if(!g.rsvps)g.rsvps={};if(g.date===undefined)g.date="";if(g.teeTime===undefined)g.teeTime="";if(g.rsvpBy===undefined)g.rsvpBy="";if(!g.addedAt)g.addedAt=Date.now();if(g.class!=="A"&&g.class!=="B")g.class="A";if(!Number.isInteger(g.gameNumber)||g.gameNumber<1)g.gameNumber=idx+1;S.players.forEach(p=>{const hs=g.holes[p.id];if(hs&&hs.some(v=>v!=null&&v!=""))g.scores[p.id]=hs.reduce((s,v)=>s+(v!=null&&v!=""?Number(v):0),0);});});
   if(!S.pendingMembers)S.pendingMembers=[];
+  if(!Array.isArray(S.events))S.events=[];
+  S.events.forEach(e=>{if(!e.id)e.id="ev_"+Math.random().toString(36).slice(2,10);if(!e.name)e.name="Untitled event";if(e.detail==null)e.detail="";if(!e.addedAt)e.addedAt=Date.now();});
   if(S.theDonId===undefined)S.theDonId=null;
   // If theDonId points to a removed player, clear it
   if(S.theDonId!=null&&!S.players.find(p=>p.id===S.theDonId))S.theDonId=null;
@@ -1242,19 +1248,24 @@ function renderSchedule(){
   const seen=getSeenGameIds();
   const gamesByDate={};
   S.games.forEach(g=>{if(g.date)gamesByDate[g.date]=g;});
+  const eventsByDate={};
+  (S.events||[]).forEach(e=>{if(e.date){(eventsByDate[e.date]=eventsByDate[e.date]||[]).push(e);}});
 
   let cells="";
   for(let i=0;i<startDow;i++)cells+='<div class="cal-cell empty"></div>';
   for(let d=1;d<=daysInMonth;d++){
     const ds=cm.y+"-"+String(cm.m+1).padStart(2,"0")+"-"+String(d).padStart(2,"0");
     const g=gamesByDate[ds];
+    const evs=eventsByDate[ds]||[];
     const cls=["cal-cell"];
     if(ds===today)cls.push("today");
     if(ds===S._selectedDate)cls.push("selected");
     if(g)cls.push("has-game");
+    if(evs.length)cls.push("has-event");
     const badge=g&&!seen.has(g.id)?'<span class="cal-unread">!</span>':"";
     const gameLabel=g?'<div class="cal-game-name">#'+(g.gameNumber||g.id)+' · '+escapeHtml(g.name)+'</div>':'';
-    cells+='<div class="'+cls.join(" ")+'" onclick="selectDate(\''+ds+'\')">'+badge+'<div class="cal-day-num">'+d+'</div>'+gameLabel+'</div>';
+    const eventLabel=evs.length?'<div class="cal-event-name">'+(evs.length===1?'● '+escapeHtml(evs[0].name):'● '+evs.length+' events')+'</div>':'';
+    cells+='<div class="'+cls.join(" ")+'" onclick="selectDate(\''+ds+'\')">'+badge+'<div class="cal-day-num">'+d+'</div>'+gameLabel+eventLabel+'</div>';
   }
   // Pad trailing cells to fill last row
   const totalCells=startDow+daysInMonth;
@@ -1278,15 +1289,40 @@ function renderSchedule(){
 function renderDayDetail(dateStr){
   if(!dateStr)return'<div class="day-detail day-detail-empty">Select a date on the calendar to see game details.</div>';
   const game=S.games.find(g=>g.date===dateStr);
+  const events=(S.events||[]).filter(e=>e.date===dateStr).sort((a,b)=>(a.addedAt||0)-(b.addedAt||0));
   const d=new Date(dateStr+"T00:00:00");
   const dayName=["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"][d.getDay()];
   const monthName=["January","February","March","April","May","June","July","August","September","October","November","December"][d.getMonth()];
   const fullDate=dayName+", "+monthName+" "+d.getDate()+", "+d.getFullYear();
-  if(!game){
-    const addBtn=can("admin")?'<div style="margin-top:14px;text-align:center"><button class="btn btn-gold" onclick="showModal(\'addGame\',{date:\''+dateStr+'\'})">+ Add Game on '+fullDate+'</button></div>':'';
-    return'<div class="day-detail day-detail-empty"><div style="font-size:13px;color:var(--text-secondary);margin-bottom:6px">'+fullDate+'</div>No game scheduled on this day.'+addBtn+'</div>';
+
+  const canAddGame=can("admin")&&!game;
+  const canAddEvent=SESSION.role!=="guest";
+  const addGameBtn=canAddGame?'<button class="btn btn-gold" onclick="showModal(\'addGame\',{date:\''+dateStr+'\'})">+ Add Game on '+fullDate+'</button>':'';
+  const addEventBtn=canAddEvent?'<button class="btn" onclick="showModal(\'addEvent\',{date:\''+dateStr+'\'})">+ Add Other Event</button>':'';
+  const actionRow=(addGameBtn||addEventBtn)?'<div style="margin-top:14px;display:flex;justify-content:center;gap:8px;flex-wrap:wrap">'+addGameBtn+addEventBtn+'</div>':'';
+
+  if(!game&&!events.length){
+    return'<div class="day-detail day-detail-empty"><div style="font-size:13px;color:var(--text-secondary);margin-bottom:6px">'+fullDate+'</div>No game or event scheduled on this day.'+actionRow+'</div>';
   }
-  return renderGameDay(game,fullDate);
+  let html='';
+  if(game)html+=renderGameDay(game,fullDate);
+  if(events.length)html+=renderEventsList(events,fullDate,!game);
+  if(actionRow)html+='<div style="margin-top:14px">'+actionRow+'</div>';
+  return html;
+}
+
+function renderEventsList(events,fullDate,showDate){
+  const cards=events.map(e=>{
+    const isAuthor=SESSION.role==="member"&&SESSION.pid&&e.addedBy==="member:"+SESSION.pid;
+    const canDel=SESSION.role==="admin"||isAuthor;
+    const delBtn=canDel?'<button class="btn-sm btn-red" onclick="removeEvent(\''+e.id+'\')" style="margin-left:auto">Delete</button>':'';
+    const author=e.addedByName?'<div style="font-size:11px;color:var(--text-muted);margin-top:4px">Added by '+escapeHtml(e.addedByName)+'</div>':'';
+    const detail=e.detail?'<div style="font-size:13px;color:var(--text-secondary);margin-top:8px;white-space:pre-wrap;line-height:1.5">'+escapeHtml(e.detail)+'</div>':'';
+    return'<div style="background:var(--bg-card-elev);border:1px solid var(--border-light);border-radius:var(--radius);padding:12px 14px;margin-top:10px"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span style="font-size:10px;color:var(--blue-light);font-weight:800;text-transform:uppercase;letter-spacing:.08em;background:rgba(106,149,212,.12);padding:3px 8px;border-radius:var(--radius-pill);border:1px solid rgba(106,149,212,.3)">Event</span><span style="font-size:15px;font-weight:700;color:var(--text-primary);flex:1;min-width:0">'+escapeHtml(e.name)+'</span>'+delBtn+'</div>'+detail+author+'</div>';
+  }).join('');
+  const dateLine=showDate?'<div style="font-size:13px;color:var(--text-secondary);margin-bottom:6px">'+fullDate+'</div>':'';
+  const heading='<div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin-bottom:6px">Other Events</div>';
+  return'<div class="day-detail" style="margin-top:'+(showDate?'0':'12px')+'">'+dateLine+heading+cards+'</div>';
 }
 
 function renderGameDay(g,fullDate){
@@ -1546,6 +1582,14 @@ function showModal(type,data){
       gameClassPicker("A")+
       '<div class="row-btns"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-gold" onclick="confirmGame()">Add</button></div>');
   }
+  else if(type==="addEvent"){
+    const presetDate=(data&&data.date)||"";
+    area.innerHTML=wrap('<h2>Other Event</h2>'+
+      '<div class="fg"><label>Date</label><input id="mEvD" type="date" value="'+presetDate+'"></div>'+
+      '<div class="fg"><label>Event Name</label><input id="mEvN" type="text" placeholder="e.g. Dinner, Birthday, Meeting"></div>'+
+      '<div class="fg"><label>Event Detail</label><textarea id="mEvDt" rows="4" placeholder="Time, location, or notes (optional)"></textarea></div>'+
+      '<div class="row-btns"><button class="btn" onclick="closeModal()">Cancel</button><button class="btn btn-gold" onclick="confirmEvent()">Add</button></div>');
+  }
   else if(type==="editGame"&&data){
     const g=S.games.find(x=>x.id===data);if(!g)return;S._eg=data;
     area.innerHTML=wrap('<h2>Edit Game</h2>'+
@@ -1627,6 +1671,28 @@ function confirmEditProfile(){
   renderAll();
 }
 function removePlayer(){if(!confirm("Remove this player from the family?"))return;S.players=S.players.filter(x=>x.id!==S._ep);closeModal();renderAll();}
+function confirmEvent(){
+  const date=(document.getElementById("mEvD").value||"").trim();
+  const name=(document.getElementById("mEvN").value||"").trim();
+  const detail=(document.getElementById("mEvDt").value||"").trim();
+  if(!date)return alert("Please pick a date for the event.");
+  if(!name)return alert("Event name is required.");
+  if(!Array.isArray(S.events))S.events=[];
+  const addedBy=SESSION.role==="admin"?"admin":(SESSION.pid?"member:"+SESSION.pid:"guest");
+  const addedByName=SESSION.name||"";
+  S.events.push({id:"ev_"+Date.now().toString(36)+Math.random().toString(36).slice(2,6),date,name,detail,addedBy,addedByName,addedAt:Date.now()});
+  S._selectedDate=date;
+  save();closeModal();renderAll();
+}
+function removeEvent(eid){
+  if(!Array.isArray(S.events))return;
+  const ev=S.events.find(e=>e.id===eid);if(!ev)return;
+  const isAuthor=SESSION.role==="member"&&SESSION.pid&&ev.addedBy==="member:"+SESSION.pid;
+  if(SESSION.role!=="admin"&&!isAuthor)return alert("Only the admin or the person who added this event can delete it.");
+  if(!confirm("Delete event \""+ev.name+"\"?"))return;
+  S.events=S.events.filter(e=>e.id!==eid);
+  save();renderAll();
+}
 function confirmGame(){
   const name=(document.getElementById("mGn").value||"").trim()||"Game "+(S.games.length+1);
   const date=(document.getElementById("mGd").value||"").trim();
