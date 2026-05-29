@@ -615,6 +615,7 @@ small{color:var(--text-secondary)}
       <button class="vtab" id="vtab6" onclick="setView(6,this)">Announcements <span class="unread-badge" id="annUnreadBadge" style="display:none">0</span></button>
       <button class="vtab" id="vtab2" onclick="setView(2,this)">Points Table</button>
       <button class="vtab" id="vtab7" onclick="setView(7,this)">News</button>
+      <button class="vtab" id="vtab8" onclick="setView(8,this)">Wheel</button>
     </div>
     <div class="sarr sarr-r" id="tabsArrR">&#8250;</div>
     </div>
@@ -626,6 +627,7 @@ small{color:var(--text-secondary)}
     <div id="v5" style="display:none"></div>
     <div id="v6" style="display:none"></div>
     <div id="v7" style="display:none"></div>
+    <div id="v8" style="display:none"></div>
   </div>
 </div>
 
@@ -957,6 +959,7 @@ function renderAll(){
   else if(S.view===5)renderMoments();
   else if(S.view===6)renderAnnouncements();
   else if(S.view===7)renderNews();
+  else if(S.view===8)renderWheel();
   const pg=document.querySelector(".page.active");
   if(pg){if(pg.id==="pageProfiles")renderProfiles();if(pg.id==="pageDetail"&&S._detailPid)renderDetail(S._detailPid);if(pg.id==="pageScorecard"&&S._scorecardGid)renderScorecard(S._scorecardGid);}
   save();
@@ -1474,7 +1477,7 @@ function setView(i,el){
   S.view=i;
   document.querySelectorAll(".vtab").forEach(t=>{t.classList.remove("active");t.classList.remove("active-gold");});
   if(el)el.classList.add("active");
-  [0,1,2,3,4,5,6,7].forEach(n=>{const v=document.getElementById("v"+n);if(v)v.style.display=n===i?"":"none";});
+  [0,1,2,3,4,5,6,7,8].forEach(n=>{const v=document.getElementById("v"+n);if(v)v.style.display=n===i?"":"none";});
   document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
   document.getElementById("pageMain").classList.add("active");
   if(i===3&&!S._selectedDate){const today=fmtDate(new Date());const todayGame=S.games.find(g=>g.date===today);if(todayGame)S._selectedDate=today;}
@@ -1996,7 +1999,7 @@ function enterApp(){
   S.view=0;
   document.querySelectorAll(".vtab").forEach(t=>{t.classList.remove("active");t.classList.remove("active-gold");});
   const vtab0=document.getElementById("vtab0");if(vtab0)vtab0.classList.add("active");
-  [0,1,2,3,4,5,6,7].forEach(n=>{const v=document.getElementById("v"+n);if(v)v.style.display=n===0?"":"none";});
+  [0,1,2,3,4,5,6,7,8].forEach(n=>{const v=document.getElementById("v"+n);if(v)v.style.display=n===0?"":"none";});
   const ab=document.getElementById("adminButtons");if(ab)ab.style.display=can("admin")?"flex":"none";
   updateUserBar();renderAll();
   // Init tab scroll arrows (slight delay so DOM is laid out)
@@ -3017,6 +3020,102 @@ async function renderNews(){
   _newsCache=html;
   v.innerHTML=html;
   _newsFetching=false;
+}
+
+// ── WHEEL OF NAMES ──
+let WHEEL={raw:"",names:[],angle:0,spinning:false,winner:null};
+WHEEL.PALETTE=["#D4B976","#9B80D4","#5BA8A0","#E0875B","#6B8FD4","#D46B8F","#7DBE6B","#C9A24A"];
+function wheelParse(raw){return (raw||"").split("\n").map(s=>s.trim()).filter(s=>s.length);}
+try{WHEEL.raw=localStorage.getItem("swmt_wheel")||"";}catch(e){}
+WHEEL.names=wheelParse(WHEEL.raw);
+function wheelSave(){try{localStorage.setItem("swmt_wheel",WHEEL.raw);}catch(e){}}
+function wheelOnInput(el){WHEEL.raw=el.value;WHEEL.names=wheelParse(WHEEL.raw);WHEEL.winner=null;wheelSave();drawWheel();const b=document.getElementById("wheelSpinBtn");if(b)b.disabled=WHEEL.names.length<2||WHEEL.spinning;const r=document.getElementById("wheelResult");if(r)r.innerHTML="";const c=document.getElementById("wheelCount");if(c)c.textContent=WHEEL.names.length+(WHEEL.names.length===1?" entry":" entries");}
+function renderWheel(){
+  const v=document.getElementById("v8");if(!v)return;
+  v.innerHTML=
+    '<p style="font-size:12px;color:var(--text-muted);letter-spacing:.02em;line-height:1.5;margin-bottom:14px">Add one name or item per line below, then spin the wheel for a random pick. Great for draws, pairings, prizes, or deciding who buys the next round. Your list is saved on this device.</p>'+
+    '<div style="display:flex;flex-direction:column;align-items:center;gap:14px;margin-bottom:22px">'+
+      '<div style="position:relative;width:100%;max-width:340px"><canvas id="wheelCanvas" width="660" height="660" style="width:100%;height:auto;display:block;cursor:pointer" onclick="spinWheel()"></canvas></div>'+
+      '<button id="wheelSpinBtn" class="btn" style="font-size:14px;padding:11px 30px;background:linear-gradient(135deg,var(--gold-light),var(--gold-dark));color:#1a1305;border:none;font-weight:800;letter-spacing:.08em" onclick="spinWheel()"'+(WHEEL.names.length<2?" disabled":"")+'>SPIN</button>'+
+      '<div id="wheelResult" style="min-height:8px"></div>'+
+    '</div>'+
+    '<div style="background:var(--bg-card);border:1px solid var(--border-light);border-radius:var(--radius);padding:14px">'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;gap:8px">'+
+        '<span style="font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-secondary)">Entries</span>'+
+        '<span id="wheelCount" style="font-size:11px;color:var(--text-muted)">'+WHEEL.names.length+(WHEEL.names.length===1?" entry":" entries")+'</span>'+
+      '</div>'+
+      '<textarea id="wheelEntries" oninput="wheelOnInput(this)" placeholder="Steve&#10;Jay&#10;Dwight&#10;Blair" spellcheck="false" style="width:100%;min-height:160px;resize:vertical;background:var(--bg-primary);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text-primary);font-family:inherit;font-size:14px;line-height:1.6">'+escapeHtml(WHEEL.raw)+'</textarea>'+
+    '</div>';
+  drawWheel();
+}
+function drawWheel(){
+  const c=document.getElementById("wheelCanvas");if(!c)return;
+  const ctx=c.getContext("2d");const W=c.width,H=c.height,cx=W/2,cy=H/2,r=Math.min(cx,cy)-10;
+  ctx.clearRect(0,0,W,H);
+  const N=WHEEL.names.length;
+  if(N===0){
+    ctx.beginPath();ctx.arc(cx,cy,r,0,2*Math.PI);ctx.fillStyle="#161D28";ctx.fill();
+    ctx.strokeStyle="#2a3344";ctx.lineWidth=3;ctx.stroke();
+    ctx.fillStyle="#9AA3B5";ctx.font="600 26px Inter,sans-serif";ctx.textAlign="center";ctx.textBaseline="middle";
+    ctx.fillText("Add names below",cx,cy);return;
+  }
+  const seg=2*Math.PI/N;
+  ctx.save();ctx.translate(cx,cy);ctx.rotate(WHEEL.angle);
+  for(let i=0;i<N;i++){
+    const a0=i*seg,a1=a0+seg;
+    ctx.beginPath();ctx.moveTo(0,0);ctx.arc(0,0,r,a0,a1);ctx.closePath();
+    ctx.fillStyle=WHEEL.PALETTE[i%WHEEL.PALETTE.length];ctx.fill();
+    ctx.strokeStyle="rgba(11,16,24,.45)";ctx.lineWidth=3;ctx.stroke();
+    ctx.save();ctx.rotate(a0+seg/2);ctx.textAlign="right";ctx.textBaseline="middle";ctx.fillStyle="#15110a";
+    const fs=Math.max(15,Math.min(34,(r*0.9)/Math.max(7,N)*1.7));ctx.font="700 "+fs+"px Inter,sans-serif";
+    let label=WHEEL.names[i];if(label.length>18)label=label.slice(0,17)+"…";
+    ctx.fillText(label,r-18,0);ctx.restore();
+  }
+  ctx.restore();
+  ctx.beginPath();ctx.arc(cx,cy,Math.max(34,r*0.13),0,2*Math.PI);ctx.fillStyle="#10161F";ctx.fill();
+  ctx.strokeStyle="#D4B976";ctx.lineWidth=5;ctx.stroke();
+  ctx.beginPath();ctx.moveTo(cx-22,4);ctx.lineTo(cx+22,4);ctx.lineTo(cx,46);ctx.closePath();
+  ctx.fillStyle="#EAD088";ctx.fill();ctx.strokeStyle="#0B1018";ctx.lineWidth=3;ctx.stroke();
+}
+function wheelWinnerIndex(){
+  const N=WHEEL.names.length;if(!N)return -1;
+  const seg=2*Math.PI/N;const pointer=3*Math.PI/2;
+  let a=((pointer-WHEEL.angle)%(2*Math.PI)+2*Math.PI)%(2*Math.PI);
+  return Math.floor(a/seg)%N;
+}
+function spinWheel(){
+  if(WHEEL.spinning||WHEEL.names.length<2)return;
+  WHEEL.spinning=true;WHEEL.winner=null;
+  const btn=document.getElementById("wheelSpinBtn");if(btn)btn.disabled=true;
+  const res=document.getElementById("wheelResult");if(res)res.innerHTML="";
+  const start=WHEEL.angle;
+  const target=start+(6+Math.random()*4)*2*Math.PI+Math.random()*2*Math.PI;
+  const dur=4200+Math.random()*1100;const t0=performance.now();
+  function frame(now){
+    const t=Math.min(1,(now-t0)/dur);const e=1-Math.pow(1-t,3);
+    WHEEL.angle=start+(target-start)*e;drawWheel();
+    if(t<1)requestAnimationFrame(frame);
+    else{WHEEL.angle=WHEEL.angle%(2*Math.PI);WHEEL.spinning=false;announceWinner();}
+  }
+  requestAnimationFrame(frame);
+}
+function announceWinner(){
+  const idx=wheelWinnerIndex();const btn=document.getElementById("wheelSpinBtn");
+  if(btn)btn.disabled=WHEEL.names.length<2;
+  if(idx<0)return;WHEEL.winner=WHEEL.names[idx];
+  const res=document.getElementById("wheelResult");if(!res)return;
+  res.innerHTML='<div style="text-align:center;background:var(--gold-bg-strong);border:1px solid var(--gold-dark);border-radius:var(--radius);padding:12px 18px;animation:pageFade .3s var(--ease)">'+
+    '<div style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;color:var(--gold)">🎉 Winner</div>'+
+    '<div style="font-size:20px;font-weight:800;color:var(--gold-light);margin-top:2px">'+escapeHtml(WHEEL.winner)+'</div>'+
+    '<button class="btn-sm" style="margin-top:8px" onclick="wheelRemoveWinner()">Remove from wheel</button>'+
+  '</div>';
+}
+function wheelRemoveWinner(){
+  if(!WHEEL.winner)return;
+  const i=WHEEL.names.indexOf(WHEEL.winner);
+  if(i>=0)WHEEL.names.splice(i,1);
+  WHEEL.raw=WHEEL.names.join("\n");WHEEL.winner=null;wheelSave();
+  renderWheel();
 }
 
 // ── PROFILE CARD MODAL ──
