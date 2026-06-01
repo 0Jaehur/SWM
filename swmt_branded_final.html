@@ -397,7 +397,7 @@ small{color:var(--text-secondary)}
 .pin-key:active{transform:scale(.93);background:var(--gold-bg);border-color:var(--gold)}
 @keyframes pinShake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
 /* ── CHAT ── */
-.chat-wrap{display:flex;flex-direction:column;height:calc(100vh - 280px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));min-height:400px;background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden}
+.chat-wrap{display:flex;flex-direction:column;height:calc(100vh - 280px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));height:calc(100dvh - 280px - env(safe-area-inset-top,0px) - env(safe-area-inset-bottom,0px));min-height:360px;max-height:calc(100dvh - 120px);background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden}
 .chat-status{padding:8px 12px;font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.06em;background:var(--bg-secondary);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:6px}
 .chat-status-dot{width:6px;height:6px;border-radius:50%;background:var(--text-muted)}
 .chat-status-dot.connected{background:var(--green-light);animation:pulse 2s infinite}
@@ -570,7 +570,7 @@ small{color:var(--text-secondary)}
 .ann-viewer-time{color:var(--text-muted);font-size:10px}
 
 /* ── USER BAR ── */
-.user-bar{display:flex;align-items:center;justify-content:space-between;padding:9px 1.25rem;background:rgba(16,22,31,.85);backdrop-filter:saturate(140%) blur(18px);-webkit-backdrop-filter:saturate(140%) blur(18px);border-bottom:1px solid var(--border);font-size:12px;position:sticky;top:0;z-index:101}
+.user-bar{display:flex;align-items:center;justify-content:space-between;padding:calc(9px + env(safe-area-inset-top,0px)) 1.25rem 9px;background:rgba(16,22,31,.85);backdrop-filter:saturate(140%) blur(18px);-webkit-backdrop-filter:saturate(140%) blur(18px);border-bottom:1px solid var(--border);font-size:12px;position:sticky;top:0;z-index:101}
 .role-badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:var(--radius-pill);font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;line-height:1.4}
 .role-badge.admin{background:var(--gold-bg);color:var(--gold-light);border:1px solid rgba(212,185,118,.35)}
 .role-badge.member{background:var(--green-bg);color:var(--green-light);border:1px solid rgba(92,184,124,.35)}
@@ -1493,33 +1493,13 @@ function openEdit(id){S._ep=id;showModal("editPlayer",S.players.find(x=>x.id===i
 function adminThenProfile(pid){S._ep=pid;S._adminNext="profile";showModal("adminPin");}
 function checkPin(){const pin=document.getElementById("mAdminPin").value;if(pin===ADMIN_PIN){setSession(null,"admin","Admin");closeModal();if(S._adminNext==="profile"){S._adminNext=null;setTimeout(()=>renderDetail(S._ep),50);}else setTimeout(()=>openEdit(S._ep),50);updateUserBar();const ab=document.getElementById("adminButtons");if(ab)ab.style.display="flex";}else alert("Incorrect PIN. Access denied.");}
 // ── EMAIL HELPERS ─────────────────────────────────────────────────
-const _EMAIL_DOMAINS=["gmail.com","yahoo.com","hotmail.com","outlook.com","icloud.com","live.com","rogers.com","shaw.ca","telus.net","sasktel.net","bellnet.ca"];
-function parseEmailForForm(email){
-  if(!email||!email.includes("@"))return{user:"",domain:"gmail.com",isOther:false,customDomain:""};
-  const at=email.indexOf("@");const user=email.slice(0,at);const domain=email.slice(at+1);
-  const known=_EMAIL_DOMAINS.includes(domain);
-  return{user,domain:known?domain:"other",isOther:!known,customDomain:known?"":domain};
-}
-function toggleEmailOther(){
-  const sel=document.getElementById("mEmDomain");const oth=document.getElementById("mEmOther");
-  if(oth)oth.style.display=(sel&&sel.value==="other")?"":"none";
-}
 function getEmailValue(){
-  const u=(document.getElementById("mEmUser")||{value:""}).value.trim();
-  const sel=document.getElementById("mEmDomain");let dom=sel?sel.value:"";
-  if(dom==="other")dom=((document.getElementById("mEmOther")||{value:""}).value||"").trim();
-  return u&&dom?u+"@"+dom:"";
+  return ((document.getElementById("mEmail")||{value:""}).value||"").trim();
 }
 function _emailField(existingEmail){
-  const ep=parseEmailForForm(existingEmail||"");
-  const opts=_EMAIL_DOMAINS.map(d=>'<option value="'+d+'"'+(ep.domain===d?' selected':'')+'>'+d+'</option>').join('')+'<option value="other"'+(ep.isOther?' selected':'')+'>Other…</option>';
   return '<div class="fg"><label>Email <span style="color:var(--red)">*</span></label>'+
-    '<div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">'+
-      '<input id="mEmUser" type="text" placeholder="yourname" style="flex:1;min-width:0" value="'+ep.user+'">'+
-      '<span style="color:var(--text-muted);font-weight:700;font-size:15px;padding:0 2px;flex-shrink:0">@</span>'+
-      '<select id="mEmDomain" onchange="toggleEmailOther()" style="flex:1;min-width:0">'+opts+'</select>'+
-    '</div>'+
-    '<input id="mEmOther" type="text" placeholder="e.g. company.com" style="margin-top:4px;display:'+(ep.isOther?"":"none")+'" value="'+(ep.customDomain||"")+'">'+
+    '<input id="mEmail" type="email" inputmode="email" autocomplete="email" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="you@example.com" value="'+escapeHtml(existingEmail||"")+'">'+
+    '<div style="font-size:11px;color:var(--text-muted);margin-top:4px">Any email works — personal, work, or company address.</div>'+
   '</div>';
 }
 
@@ -3489,6 +3469,12 @@ function updateBadge(count){
   if("setAppBadge" in navigator){
     (count>0?navigator.setAppBadge(count):navigator.clearAppBadge()).catch(()=>{});
   }
+  // Keep the service worker's badge count in sync so a closed app shows the right number
+  try{
+    if(navigator.serviceWorker&&navigator.serviceWorker.controller){
+      navigator.serviceWorker.controller.postMessage({type:"SET_BADGE",count:count});
+    }
+  }catch(e){}
 }
 function getTotalUnread(){
   let n=0;
