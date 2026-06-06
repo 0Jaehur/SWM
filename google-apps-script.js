@@ -18,6 +18,8 @@
 // ── SETUP ──────────────────────────────────────────────────────────
 const PROPS          = PropertiesService.getScriptProperties();
 const SHEET_NAME     = "SWMT_Data";
+const BACKUP_SHEET_NAME = "SWMT_Backup";
+const BACKUP_MAX_ROWS   = 100;   // keep only the latest N backups
 const TWILIO_SID     = PROPS.getProperty("TWILIO_SID")   || "";
 const TWILIO_TOKEN   = PROPS.getProperty("TWILIO_TOKEN") || "";
 const TWILIO_FROM    = PROPS.getProperty("TWILIO_FROM")  || "";
@@ -62,8 +64,35 @@ function getSheet() {
 
 function saveData(data) {
   const sheet = getSheet();
-  sheet.getRange("A1").setValue(JSON.stringify(data));
+  const jsonStr = JSON.stringify(data);
+  sheet.getRange("A1").setValue(jsonStr);
   sheet.getRange("B1").setValue(new Date().toISOString());
+  // Append a backup snapshot (best-effort: never block the main save)
+  try { appendBackup(jsonStr); } catch (e) { Logger.log("Backup failed: " + e.message); }
+}
+
+// ── AUTO BACKUP ───────────────────────────────────────────────────
+// Every save appends one row [timestamp, JSON] to the SWMT_Backup sheet,
+// keeping only the latest BACKUP_MAX_ROWS rows.
+function getBackupSheet() {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  let sheet = ss.getSheetByName(BACKUP_SHEET_NAME);
+  if (!sheet) {
+    sheet = ss.insertSheet(BACKUP_SHEET_NAME);
+    sheet.getRange("A1").setValue("timestamp");
+    sheet.getRange("B1").setValue("data");
+  }
+  return sheet;
+}
+
+function appendBackup(jsonStr) {
+  const sheet = getBackupSheet();
+  sheet.appendRow([new Date().toISOString(), jsonStr]);
+  // Trim oldest rows beyond the limit (row 1 is the header).
+  const dataRows = sheet.getLastRow() - 1;
+  if (dataRows > BACKUP_MAX_ROWS) {
+    sheet.deleteRows(2, dataRows - BACKUP_MAX_ROWS);
+  }
 }
 
 function loadData() {
