@@ -815,7 +815,7 @@ function initPlayers(){
   members.forEach((m,i)=>S.players.push({id:i+1,...m,birthday:"",photo:null,awards:[],bio:"",phone:"",email:"",pin:"0000",role:"member"}));
 }
 function initGames(){S.games=Array.from({length:S.totalGames},(_,i)=>({id:i+1,gameNumber:i+1,name:"Game "+(i+1),done:false,scores:{},holes:{},pars:DEFAULT_PARS.slice(),rsvps:{},date:"",teeTime:"",rsvpBy:"",class:"A",addedAt:Date.now()}));}
-function save(){try{localStorage.setItem("swmt_2026",JSON.stringify(S));}catch(e){}if(CONFIG.appsScriptUrl)syncToSheet();}
+function save(){S.lastModified=Date.now();try{localStorage.setItem("swmt_2026",JSON.stringify(S));}catch(e){}if(CONFIG.appsScriptUrl)syncToSheet();}
 function load(){
   try{
     const d=localStorage.getItem("swmt_2026");
@@ -3455,6 +3455,10 @@ async function loadFromSheet(){
     if(!r.ok)return;
     const d=await r.json();
     if(d&&d.players){
+      // Stale-write guard: never let an OLDER sheet snapshot overwrite newer local data.
+      // If our local copy is newer, push it back up to heal the sheet instead.
+      const localTs=Number(S.lastModified)||0,sheetTs=Number(d.lastModified)||0;
+      if(localTs>sheetTs){if(CONFIG.appsScriptUrl)syncToSheet();return;}
       const photos={};S.players.forEach(p=>{if(p.photo)photos[p.id]=p.photo;});
       Object.assign(S,d);
       S.players.forEach(p=>{if(photos[p.id])p.photo=photos[p.id];});
