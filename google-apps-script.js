@@ -42,7 +42,7 @@ function doPost(e) {
     const body   = JSON.parse(e.postData.contents);
     const action = body.action;
 
-    if (action === "save")            { saveData(body.data);                            return json({ ok: true }); }
+    if (action === "save")            { return json(saveData(body.data)); }
     if (action === "notify")          { sendNotifications(body.post, body.players);     return json({ ok: true }); }
     if (action === "notifyAdmin")     { sendAdminNotification(body.req);                return json({ ok: true }); }
     if (action === "notifyGameAdded") { sendGameAddedNotifications(body.game, body.players); return json({ ok: true }); }
@@ -63,12 +63,33 @@ function getSheet() {
 }
 
 function saveData(data) {
-  const sheet = getSheet();
-  const jsonStr = JSON.stringify(data);
-  sheet.getRange("A1").setValue(jsonStr);
-  sheet.getRange("B1").setValue(new Date().toISOString());
-  // Append a backup snapshot (best-effort: never block the main save)
-  try { appendBackup(jsonStr); } catch (e) { Logger.log("Backup failed: " + e.message); }
+  // Serialize concurrent saves so the compare-and-write is atomic.
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(10000); // wait up to 10s for another save to finish
+  } catch (e) {
+    return { ok: false, error: "busy" };
+  }
+  try {
+    const sheet = getSheet();
+    // Stale-write guard: reject data older than what is already saved.
+    // C1 stores the last saved client lastModified timestamp (ms since epoch),
+    // separate from B1 which records the server-side save time (ISO string).
+    const incomingTs = Number(data && data.lastModified) || 0;
+    const savedTs    = Number(sheet.getRange("C1").getValue()) || 0;
+    if (savedTs > 0 && incomingTs < savedTs) {
+      return { ok: false, error: "stale", saved: savedTs, incoming: incomingTs };
+    }
+    const jsonStr = JSON.stringify(data);
+    sheet.getRange("A1").setValue(jsonStr);
+    sheet.getRange("B1").setValue(new Date().toISOString());
+    sheet.getRange("C1").setValue(incomingTs);
+    // Append a backup snapshot (best-effort: never block the main save)
+    try { appendBackup(jsonStr); } catch (e) { Logger.log("Backup failed: " + e.message); }
+    return { ok: true, saved: incomingTs };
+  } finally {
+    lock.releaseLock();
+  }
 }
 
 // ── AUTO BACKUP ───────────────────────────────────────────────────
